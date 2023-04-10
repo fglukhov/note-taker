@@ -10,7 +10,7 @@ export type NoteProps = {
     email: string;
   } | null;
   content: string;
-	created_at: Date;
+	createdAt: Date;
 };
 
 const Note: React.FC<{ note: NoteProps }> = ({ note }) => {
