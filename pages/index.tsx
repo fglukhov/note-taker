@@ -1,19 +1,24 @@
 import React from "react"
 import { GetStaticProps } from "next"
 import Layout from "../components/Layout"
-import Post, { PostProps } from "../components/Post"
+import Note, { NoteProps } from "../components/Note"
 import prisma from '../lib/prisma';
+import Router from "next/router";
+import {getAllNotesIds} from "../lib/notes";
 
 // index.tsx
 export const getStaticProps: GetStaticProps = async () => {
-	const feed = await prisma.post.findMany({
-		where: { published: true },
+
+	const paths = await getAllNotesIds();
+
+	const feed = await prisma.note.findMany({
 		include: {
 			author: {
 				select: { name: true },
 			},
 		},
 	});
+
 	return {
 		props: { feed },
 		revalidate: 10,
@@ -21,38 +26,41 @@ export const getStaticProps: GetStaticProps = async () => {
 };
 
 type Props = {
-  feed: PostProps[]
+  feed: NoteProps[]
 }
 
-const Blog: React.FC<Props> = (props) => {
+const Notes: React.FC<Props> = (props) => {
   return (
     <Layout>
       <div className="page">
-        <h1>Public Feed</h1>
+        <h1>Notes</h1>
         <main>
-          {props.feed.map((post) => (
-            <div key={post.id} className="post">
-              <Post post={post} />
-            </div>
-          ))}
+					<div className="notes-list">
+						{props.feed.map((note) => (
+							<div key={note.id} className="notes-list-item">
+								<Note note={note} />
+							</div>
+						))}
+					</div>
         </main>
       </div>
       <style jsx>{`
-        .post {
+        .notes-list-item {
           background: white;
           transition: box-shadow 0.1s ease-in;
+					padding: 10px 20px;
         }
 
-        .post:hover {
+        .notes-list-item:hover {
           box-shadow: 1px 1px 3px #aaa;
         }
 
-        .post + .post {
-          margin-top: 2rem;
+        .notes-list-item + .notes-list-item {
+          margin-top: 1px;
         }
       `}</style>
     </Layout>
   )
 }
 
-export default Blog
+export default Notes

@@ -1,7 +1,7 @@
 // pages/create.tsx
 
 import React, { useState } from 'react';
-import Layout from '../components/Layout';
+import Layout from '../../components/Layout';
 import Router from 'next/router';
 
 const Draft: React.FC = () => {
@@ -12,12 +12,12 @@ const Draft: React.FC = () => {
 		e.preventDefault();
 		try {
 			const body = { title, content };
-			await fetch('/api/post', {
+			await fetch('/api/blog/post', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify(body),
 			});
-			await Router.push('/drafts');
+			await Router.push('/blog/drafts');
 		} catch (error) {
 			console.error(error);
 		}

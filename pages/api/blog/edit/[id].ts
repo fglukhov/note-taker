@@ -1,13 +1,14 @@
-// pages/api/publish/[id].ts
+import prisma from '../../../../lib/prisma';
 
-import prisma from '../../../lib/prisma';
-
-// PUT /api/publish/:id
 export default async function handle(req, res) {
 	const postId = req.query.id;
+	const { title, content } = req.body;
 	const post = await prisma.post.update({
 		where: { id: postId },
-		data: { published: true },
+		data: {
+			title: title,
+			content: content,
+		},
 	});
 	res.json(post);
 }

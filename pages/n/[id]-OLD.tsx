@@ -5,12 +5,12 @@ import { GetServerSideProps } from 'next';
 import ReactMarkdown from 'react-markdown';
 import Router from 'next/router';
 import Layout from '../../components/Layout';
-import { PostProps } from '../../components/Post';
+import { NoteProps } from '../../components/Note';
 import { useSession } from 'next-auth/react';
 import prisma from '../../lib/prisma';
 
 export const getServerSideProps: GetServerSideProps = async ({ params }) => {
-	const post = await prisma.post.findUnique({
+	const note = await prisma.note.findUnique({
 		where: {
 			id: String(params?.id),
 		},
@@ -20,26 +20,27 @@ export const getServerSideProps: GetServerSideProps = async ({ params }) => {
 			},
 		},
 	});
+
 	return {
-		props: post,
+		props: note,
 	};
 };
 
-async function publishPost(id: string): Promise<void> {
+async function publishNote(id: string): Promise<void> {
 	await fetch(`/api/publish/${id}`, {
 		method: 'PUT',
 	});
 	await Router.push('/');
 }
 
-async function deletePost(id: string): Promise<void> {
-	await fetch(`/api/post/${id}`, {
+async function deleteNote(id: string): Promise<void> {
+	await fetch(`/api/delete/${id}`, {
 		method: 'DELETE',
 	});
 	Router.push('/');
 }
 
-const Post: React.FC<PostProps> = (props) => {
+const Note: React.FC<NoteProps> = (props) => {
 	const { data: session, status } = useSession();
 
 	const [title, setTitle] = useState(props.title);
@@ -51,7 +52,6 @@ const Post: React.FC<PostProps> = (props) => {
 		e.preventDefault();
 		try {
 			const body = { title, content };
-			console.log(body)
 			await fetch(`/api/edit/${props.id}`, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
@@ -68,14 +68,7 @@ const Post: React.FC<PostProps> = (props) => {
 		return <div>Authenticating ...</div>;
 	}
 	const userHasValidSession = Boolean(session);
-	const postBelongsToUser = session?.user?.email === props.author?.email;
-	//let title = props.title;
-	//setTitle(props.title);
-	// if (!props.published) {
-	// 	setTitle(`${title} (Draft)`);
-	// }
-
-	console.log(title)
+	const noteBelongsToUser = session?.user?.email === props.author?.email;
 
 	return (
 		<Layout>
@@ -101,32 +94,26 @@ const Post: React.FC<PostProps> = (props) => {
 					</form>
 				) : (
 					<>
-						<h2>{title}{!props.published ? " (Draft)" : ""}</h2>
+						<h2>{title}</h2>
 						<p>By {props?.author?.name || 'Unknown author'}</p>
 						<ReactMarkdown children={content} />
 					</>
 				)}
 
-
 				{
-					!isEdit && !props.published && userHasValidSession && postBelongsToUser && (
-						<button onClick={() => publishPost(props.id)}>Publish</button>
-					)
-				}
-				{
-					!isEdit && userHasValidSession && postBelongsToUser && (
+					!isEdit && userHasValidSession && noteBelongsToUser && (
 						<button onClick={() => setIsEdit(true)}>Edit</button>
 					)
 				}
 
 				{
-					isEdit && userHasValidSession && postBelongsToUser && (
+					isEdit && userHasValidSession && noteBelongsToUser && (
 						<button onClick={() => setIsEdit(false)}>Cancel edit</button>
 					)
 				}
 				{
-					userHasValidSession && postBelongsToUser && (
-						<button onClick={() => deletePost(props.id)}>Delete</button>
+					userHasValidSession && noteBelongsToUser && (
+						<button onClick={() => deleteNote(props.id)}>Delete</button>
 					)
 				}
 			</div>
@@ -171,4 +158,4 @@ const Post: React.FC<PostProps> = (props) => {
 	);
 };
 
-export default Post;
+export default Note;

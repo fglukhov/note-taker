@@ -19,6 +19,15 @@ model Post {
 	authorId  String?
 }
 
+model Note {
+	id        String  @id @default(cuid())
+	title     String
+	content   String?
+	author    User?   @relation(fields: [authorId], references: [id])
+	authorId  String?
+	createdAt DateTime  @default(now()) @map(name: "created_at")
+}
+
 model Account {
 	id                 String  @id @default(cuid())
 	userId             String  @map("user_id")
@@ -60,6 +69,7 @@ model User {
 	createdAt     DateTime  @default(now()) @map(name: "created_at")
 	updatedAt     DateTime  @updatedAt @map(name: "updated_at")
 	posts         Post[]
+	notes         Note[]
 	accounts      Account[]
 	sessions      Session[]
 
