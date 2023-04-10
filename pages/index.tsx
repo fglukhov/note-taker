@@ -37,27 +37,13 @@ const Notes: React.FC<Props> = (props) => {
         <main>
 					<div className="notes-list">
 						{props.feed.map((note) => (
-							<div key={note.id} className="notes-list-item">
-								<Note note={note} />
-							</div>
+							<Note key={note.id} note={note} />
 						))}
 					</div>
         </main>
       </div>
       <style jsx>{`
-        .notes-list-item {
-          background: white;
-          transition: box-shadow 0.1s ease-in;
-					padding: 10px 20px;
-        }
-
-        .notes-list-item:hover {
-          box-shadow: 1px 1px 3px #aaa;
-        }
-
-        .notes-list-item + .notes-list-item {
-          margin-top: 1px;
-        }
+        
       `}</style>
     </Layout>
   )
