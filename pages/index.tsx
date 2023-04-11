@@ -12,7 +12,7 @@ export const getStaticProps: GetStaticProps = async () => {
 
 	const feed = await prisma.note.findMany({
 		orderBy: {
-			order: 'asc',
+			sort: 'asc',
 		},
 		include: {
 			author: {
