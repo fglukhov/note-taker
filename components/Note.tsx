@@ -11,7 +11,7 @@ export type NoteProps = {
   } | null;
   content: string;
 	createdAt: Date;
-	order: number;
+	sort: number;
 };
 
 const Note: React.FC<{ note: NoteProps }> = ({ note }) => {
