@@ -26,6 +26,7 @@ model Note {
 	author    User?   @relation(fields: [authorId], references: [id])
 	authorId  String?
 	createdAt DateTime  @default(now())
+	order     Int @default(1)
 }
 
 model Account {

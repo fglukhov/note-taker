@@ -34,7 +34,7 @@ async function publishNote(id: string): Promise<void> {
 }
 
 async function deleteNote(id: string): Promise<void> {
-	await fetch(`/api/delete/${id}`, {
+	await fetch(`/api/post/${id}`, {
 		method: 'DELETE',
 	});
 	Router.push('/');
