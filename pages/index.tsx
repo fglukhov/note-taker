@@ -11,9 +11,9 @@ import {useKeyPress} from '../lib/useKeyPress';
 export const getStaticProps: GetStaticProps = async () => {
 
 	const feed = await prisma.note.findMany({
-		orderBy: {
-			order: 'asc',
-		},
+		// orderBy: {
+		// 	sort: 'asc',
+		// },
 		include: {
 			author: {
 				select: { name: true },
