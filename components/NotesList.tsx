@@ -100,7 +100,7 @@ const NotesList: React.FC<Props> = (props) => {
 				clearTimeout(timeout);
 				setLastKey(null);
 
-				let newNote = {
+				let newNote:NoteProps = {
 					id: crypto.randomUUID(),
 					title: "",
 					content: "",
