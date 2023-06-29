@@ -7,7 +7,7 @@ export default async function handle(req, res) {
 		where: { id: noteId },
 		data: {
 			title: title,
-			content: content,
+			content: content != null ? content : undefined,
 		},
 	});
 	res.json(note);
