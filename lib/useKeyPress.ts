@@ -21,6 +21,7 @@ export const useKeyPress = (keys, callback, node = null) => {
   useEffect(() => {
     // target is either the provided node or the document
     const targetNode = node ?? document;
+
     // attach the event listener
     targetNode &&
       targetNode.addEventListener("keydown", handleKeyPress);
