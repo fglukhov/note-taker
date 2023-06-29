@@ -5,14 +5,14 @@ import Router from "next/router";
 type Props = {
 	id: string;
 	title: string;
-	sort: number;
+	sort?: number;
 	isEdit?: boolean;
 	isFocus?: boolean;
 	isNew?: boolean;
 	children?: ReactNode;
-	onCancel: () => any;
-	onEdit: () => any;
-	onAdd: () => any;
+	onCancel?: () => any;
+	onEdit?: () => any;
+	onAdd?: () => any;
 }
 
 const NotesListItem: React.FC<Props> = (props) => {
