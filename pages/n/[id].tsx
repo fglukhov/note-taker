@@ -49,7 +49,7 @@ async function deleteNote(id: string): Promise<void> {
 	Router.push('/');
 }
 
-const Note: React.FC<NoteProps> = (props) => {
+const NoteExpanded: React.FC<NoteProps> = (props) => {
 	const { data: session, status } = useSession();
 
 	const router = useRouter();
@@ -110,7 +110,7 @@ const Note: React.FC<NoteProps> = (props) => {
 							rows={8}
 							value={content}
 						/>
-						<input disabled={!content || !title} type="submit" value="Save" />
+						<input disabled={!title} type="submit" value="Save" />
 					</form>
 				) : (
 					<>
@@ -178,4 +178,4 @@ const Note: React.FC<NoteProps> = (props) => {
 	);
 };
 
-export default Note;
+export default NoteExpanded;

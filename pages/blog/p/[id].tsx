@@ -94,7 +94,7 @@ const Post: React.FC<PostProps> = (props) => {
 							rows={8}
 							value={content}
 						/>
-						<input disabled={!content || !title} type="submit" value="Save" />
+						<input disabled={!title} type="submit" value="Save" />
 					</form>
 				) : (
 					<>
