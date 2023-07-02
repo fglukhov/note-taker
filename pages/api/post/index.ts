@@ -7,13 +7,14 @@ import prisma from '../../../lib/prisma';
 // Required fields in body: title
 // Optional fields in body: content
 export default async function handle(req, res) {
-	const { id, title, content } = req.body;
+	const { id, title, content, sort } = req.body;
 
 	const session = await getSession({ req });
 	const result = await prisma.note.create({
 		data: {
 			id: id,
 			title: title,
+			sort: sort,
 			content: content,
 			author: { connect: { email: session?.user?.email } },
 		},
