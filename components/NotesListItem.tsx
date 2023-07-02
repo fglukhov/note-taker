@@ -2,7 +2,7 @@ import React, {ReactNode, useState} from "react";
 import {useKeyPress} from '../lib/useKeyPress';
 import Router from "next/router";
 
-type Props = {
+export type NotesListItemProps = {
 	id: string;
 	title: string;
 	sort?: number;
@@ -10,15 +10,16 @@ type Props = {
 	isFocus?: boolean;
 	isNew?: boolean;
 	children?: ReactNode;
-	onCancel?: () => any;
+	onCancel?: (isNewParam) => any;
 	onEdit?: () => any;
 	onAdd?: () => any;
 }
 
-const NotesListItem: React.FC<Props> = (props) => {
+const NotesListItem: React.FC<NotesListItemProps> = (props) => {
 
 	const [id, setId] = useState(props.id);
 	const [title, setTitle] = useState(props.title);
+	const [sort, setSort] = useState(props.sort);
 	const [prevTitle, setPrevTitle] = useState(props.title);
 	const [isNew, setIsNew] = useState(props.isNew);
 
@@ -27,12 +28,15 @@ const NotesListItem: React.FC<Props> = (props) => {
 
 		if (eventKey == "Escape") {
 
-			console.log('esc item')
-
 			if (props.isEdit) {
 
-				setTitle(prevTitle);
-				props.onCancel();
+				if (!isNew) {
+
+					setTitle(prevTitle);
+
+				}
+
+				props.onCancel(isNew);
 
 			}
 
@@ -49,7 +53,7 @@ const NotesListItem: React.FC<Props> = (props) => {
 
 		if (!isNew) {
 
-			console.log({id})
+			// editing note
 
 			try {
 				const body = { title };
@@ -58,10 +62,10 @@ const NotesListItem: React.FC<Props> = (props) => {
 					headers: { 'Content-Type': 'application/json' },
 					body: JSON.stringify(body),
 				});
-				console.log(title)
+
 				setTitle(title);
 				setPrevTitle(title);
-				//await Router.push('/');
+
 			} catch (error) {
 				console.error(error);
 			}
@@ -71,7 +75,7 @@ const NotesListItem: React.FC<Props> = (props) => {
 			// Adding new note
 
 			try {
-				const body = { id, title };
+				const body = { id, title, sort };
 
 				await fetch('/api/post', {
 					method: 'POST',
@@ -81,7 +85,6 @@ const NotesListItem: React.FC<Props> = (props) => {
 
 				setIsNew(false);
 
-				//await Router.push('/');
 			} catch (error) {
 				console.error(error);
 			}
@@ -98,7 +101,7 @@ const NotesListItem: React.FC<Props> = (props) => {
 
 		<div className={"notes-list-item " + (props.isFocus ? "focus" : "")} id={props.id}>
 
-			{/*<div>{isNew ? "true" : "false"}</div>*/}
+			{/*{(isNew) ? "NEW" : "OLD"}*/}
 
 			{!(props.isEdit && props.isFocus) ? (
 				<div className="notes-item-title">
@@ -110,9 +113,11 @@ const NotesListItem: React.FC<Props> = (props) => {
 					<div className="notes-item-title-form">
 						<form onSubmit={(e) => {
 							editTitle(e).then(() => {
-								if (!props.isNew) {
+								if (!isNew) {
 									props.onEdit();
 								} else {
+									setIsNew(false);
+									setPrevTitle(title);
 									props.onAdd();
 								}
 							});
@@ -152,6 +157,8 @@ const NotesListItem: React.FC<Props> = (props) => {
 		</div>
 
 	)
+
+
 }
 
 
