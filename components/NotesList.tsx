@@ -218,7 +218,7 @@ const NotesList: React.FC<Props> = (props) => {
 					onEdit={() => {setIsEditTitle(false)}}
 					onAdd={() => {
 						setIsEditTitle(false);
-						//resortNotes(notesFeed);
+						resortNotes(notesFeed);
 					}}
 					isNew={note.isNew ? true : false}
 				/>
