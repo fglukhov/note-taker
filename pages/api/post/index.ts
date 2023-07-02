@@ -19,6 +19,23 @@ export default async function handle(req, res) {
 			author: { connect: { email: session?.user?.email } },
 		},
 	});
+
+	const updatePosts = await prisma.note.updateMany({
+		where: {
+			sort: {
+				gt: sort-1
+			},
+			NOT: {
+				id: id
+			},
+		},
+		data: {
+			sort: {
+				increment: 1,
+			}
+		},
+	})
+
 	res.json(result);
 }
 
