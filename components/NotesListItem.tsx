@@ -1,6 +1,6 @@
 import React, {ReactNode, useState} from "react";
 import {useKeyPress} from '../lib/useKeyPress';
-import Router from "next/router";
+//import Router from "next/router";
 
 export type NotesListItemProps = {
 	id: string;
