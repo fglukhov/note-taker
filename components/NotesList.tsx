@@ -1,30 +1,84 @@
 import React, {useState} from "react";
+//import { useImmer } from 'use-immer';
 import NotesListItem from "./NotesListItem";
-import {NoteProps} from "./Note";
+import {NotesListItemProps} from "./NotesListItem";
 import {useKeyPress} from '../lib/useKeyPress';
 
 type Props = {
-	feed: NoteProps[]
+	feed: NotesListItemProps[]
 }
 
 const NotesList: React.FC<Props> = (props) => {
 
 	const [notesFeed, setNotesFeed] = useState(props.feed);
-	
-	const [focusId, setFocusId] = useState(null);
+
+	//const [focusId, setFocusId] = useState(null);
 	const [isEditTitle, setIsEditTitle] = useState(false);
 	const [lastKey, setLastKey] = useState(null);
 	const [cursorPosition, setCursorPosition] = useState(null);
 
-	async function resortNotes(notesFeed) {
+	// Initial notes order
 
-		// console.log(notesFeed)
-		//
-		// await fetch(`/api/resort-notes`, {
-		// 	method: 'POST',
-		// 	headers: { 'Content-Type': 'application/json' },
-		// 	id: JSON.stringify(notesFeed),
-		// });
+
+	let initialOrder = [];
+
+	for (let i = 0; i < notesFeed.length; i++) {
+
+		initialOrder.push({
+			id: notesFeed[i].id,
+			position: i
+		});
+
+	}
+
+	const [notesOrder, setNotesOrder] = useState(initialOrder);
+
+
+
+	//setNotesOrder(initialOrder)
+
+	//setListSort(nextListSort);
+
+
+	function resortNotes(newFeed) {
+
+		let notesNewOrder = [];
+
+		for (let i = 0; i < newFeed.length; i++) {
+
+			notesNewOrder.push({
+				id: newFeed[i].id,
+				position: i
+			})
+
+		}
+
+		let firstIncrementIndex = null;
+		let newId = null;
+
+		for (let i = 0; i < notesNewOrder.length; i++) {
+
+			if (notesNewOrder[i].id !== notesOrder[i].id) {
+
+				firstIncrementIndex = i;
+
+				newId = notesNewOrder[i].id;
+
+				break;
+
+			}
+
+		}
+
+		setNotesOrder(notesNewOrder)
+
+		const body = { firstIncrementIndex, newId };
+
+		fetch(`/api/resort-notes`, {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify(body)
+		});
 
 	}
 
@@ -100,10 +154,10 @@ const NotesList: React.FC<Props> = (props) => {
 				clearTimeout(timeout);
 				setLastKey(null);
 
-				let newNote:NoteProps = {
+				let newNote:NotesListItemProps = {
 					id: crypto.randomUUID(),
 					title: "",
-					content: "",
+					sort: cursorPosition + 1,
 					isNew: true
 				}
 
@@ -124,6 +178,8 @@ const NotesList: React.FC<Props> = (props) => {
 					setIsEditTitle(true);
 
 					setCursorPosition(cursorPosition + 1);
+
+					//resortNotes(newFeed);
 
 				}, 10);
 
@@ -146,18 +202,25 @@ const NotesList: React.FC<Props> = (props) => {
 					id={note.id}
 					sort={note.sort}
 					title={note.title}
-					isFocus={(i === cursorPosition ? true : false)}
-					isEdit={((i === cursorPosition && isEditTitle) ? true : false)}
-					onCancel={() => {
+					isFocus={i === cursorPosition}
+					isEdit={(i === cursorPosition && isEditTitle)}
+					onCancel={(isNewParam) => {
 						setIsEditTitle(false);
-
+						if (isNewParam) {
+							setNotesFeed(
+								notesFeed.filter(n =>
+									n.id !== note.id
+								)
+							);
+							setCursorPosition(cursorPosition-1)
+						}
 					}}
 					onEdit={() => {setIsEditTitle(false)}}
 					onAdd={() => {
 						setIsEditTitle(false);
-						//resortNotes(notesFeed);
+						resortNotes(notesFeed);
 					}}
-					isNew={note.isNew}
+					isNew={note.isNew ? true : false}
 				/>
 			))}
 		</div>

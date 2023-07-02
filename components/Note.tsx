@@ -5,15 +5,12 @@ import ReactMarkdown from "react-markdown";
 export type NoteProps = {
 	id: string;
 	title: string;
-	author?: {
+	author: {
 		name: string;
 		email: string;
 	} | null;
 	content: string;
-	createdAt?: Date;
-	sort?: number;
-	isEdit?: boolean;
-	isNew?: boolean;
+	createdAt: Date;
 };
 
 const Note: React.FC<{ note: NoteProps }> = ({note}) => {
