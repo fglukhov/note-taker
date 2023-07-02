@@ -7,20 +7,31 @@ import prisma from '../../../lib/prisma';
 // Required fields in body: title
 // Optional fields in body: content
 
-export default async function handle(req, res) {
+export const config = {
+	api: {
+		externalResolver: true,
+	},
+}
 
-	const notesFeed = req.feed;
+export default async function handle(req) {
 
-	for (let i=0; i < notesFeed; i++) {
+	const { firstIncrementIndex, newId } = req.body;
 
-		const note = await prisma.note.update({
-			where: { id: notesFeed.id },
-			data: {
-				sort: i,
+	const updatePosts = await prisma.note.updateMany({
+		where: {
+			sort: {
+				gt: firstIncrementIndex - 1
+			},
+			NOT: {
+				id: newId
+			},
+		},
+		data: {
+			sort: {
+				increment: 1,
 			}
-		});
-
-	}
+		},
+	})
 
 }
 
