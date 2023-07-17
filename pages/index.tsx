@@ -1,34 +1,42 @@
 import React, {ReactNode, useState} from "react"
-import { GetStaticProps } from "next"
+import { GetServerSideProps } from "next"
 import Layout from "../components/Layout"
 import NotesList from "../components/NotesList"
 import { NoteProps } from "../components/Note"
 import prisma from '../lib/prisma';
+import {getSession} from "next-auth/react";
 
 
 // index.tsx
-export const getStaticProps: GetStaticProps = async () => {
+export const getServerSideProps: GetServerSideProps = async (context) => {
 
-	const feed = await prisma.note.findMany({
-		orderBy: {
-			sort: 'asc',
-		},
-		include: {
-			author: {
-				select: { name: true },
+	const session = await getSession(context);
+
+	let feed = [];
+
+	if (session) {
+
+		feed = await prisma.note.findMany({
+			orderBy: {
+				sort: 'asc',
 			},
-		},
-	});
+			where: {
+				// @ts-ignore
+				authorId: session.user.id
+			}
+		});
+
+	}
 
 	return {
-		props: { feed },
-		revalidate: 10,
+		props: { feed, session }
 	};
 
 };
 
 type Props = {
-	feed: NoteProps[]
+	feed: NoteProps[],
+	session: any,
 }
 
 const Main: React.FC<Props> = (props) => {
@@ -38,7 +46,9 @@ const Main: React.FC<Props> = (props) => {
       <div className="page">
         <h1>Notes</h1>
         <main>
-					<NotesList feed={props.feed} />
+					{props.session && (
+						<NotesList feed={props.feed} />
+					)}
         </main>
       </div>
     </Layout>
