@@ -1,6 +1,6 @@
 import React, {ReactNode, useState} from "react";
 import {useKeyPress} from '../lib/useKeyPress';
-import Router from "next/router";
+import {useReducer} from "react";
 
 export type NotesListItemProps = {
 	id: string;
@@ -13,18 +13,36 @@ export type NotesListItemProps = {
 	onCancel?: (isNewParam) => any;
 	onEdit?: () => any;
 	onAdd?: () => any;
+	onDelete?: () => any;
 }
 
 const NotesListItem: React.FC<NotesListItemProps> = (props) => {
 
-	const [id, setId] = useState(props.id);
+	const id = props.id;
 	const [title, setTitle] = useState(props.title);
-	const [sort, setSort] = useState(props.sort);
+	const sort = props.sort;
 	const [prevTitle, setPrevTitle] = useState(props.title);
 	const [isNew, setIsNew] = useState(props.isNew);
 
+	//const [ignored, forceUpdate] = useReducer(x => x + 1, 0);
+
+	const deleteNote = async () => {
+		console.log('Delete note ' + id)
+
+		const body = { id, title, sort };
+
+		await fetch(`/api/delete/${id}`, {
+			method: 'DELETE',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify(body),
+		});
+
+	}
+
 	const onKeyPress = (event) => {
 		let eventKey = event.key;
+
+		console.log(eventKey);
 
 		if (eventKey == "Escape") {
 
@@ -40,6 +58,18 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
 
 			}
 
+
+		}
+
+		if (eventKey == "Delete") {
+
+			if (!props.isEdit && props.isFocus) {
+
+				deleteNote().then(() => {
+					props.onDelete();
+				});
+
+			}
 
 		}
 
