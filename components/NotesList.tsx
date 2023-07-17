@@ -31,56 +31,7 @@ const NotesList: React.FC<Props> = (props) => {
 
 	}
 
-	const [notesOrder, setNotesOrder] = useState(initialOrder);
 
-
-
-	//setNotesOrder(initialOrder)
-
-	//setListSort(nextListSort);
-
-
-	function resortNotes(newFeed) {
-
-		let notesNewOrder = [];
-
-		for (let i = 0; i < newFeed.length; i++) {
-
-			notesNewOrder.push({
-				id: newFeed[i].id,
-				position: i
-			})
-
-		}
-
-		let firstIncrementIndex = null;
-		let newId = null;
-
-		for (let i = 0; i < notesNewOrder.length; i++) {
-
-			if (notesNewOrder[i].id !== notesOrder[i].id) {
-
-				firstIncrementIndex = i;
-
-				newId = notesNewOrder[i].id;
-
-				break;
-
-			}
-
-		}
-
-		setNotesOrder(notesNewOrder)
-
-		const body = { firstIncrementIndex, newId };
-
-		fetch(`/api/resort-notes`, {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify(body)
-		});
-
-	}
 
 	const onKeyPress = (event) => {
 
@@ -179,14 +130,14 @@ const NotesList: React.FC<Props> = (props) => {
 
 					setCursorPosition(cursorPosition + 1);
 
-					//resortNotes(newFeed);
-
 				}, 10);
 
 			}
 			
 
 		}
+
+
 
 	};
 
@@ -195,7 +146,6 @@ const NotesList: React.FC<Props> = (props) => {
 
 	return (
 		<div className="notes-list">
-			<p>isEditTitle: {isEditTitle ? "true" : "false"}</p>
 			{notesFeed.map((note, i) => (
 				<NotesListItem
 					key={note.id}
@@ -218,7 +168,14 @@ const NotesList: React.FC<Props> = (props) => {
 					onEdit={() => {setIsEditTitle(false)}}
 					onAdd={() => {
 						setIsEditTitle(false);
-						//resortNotes(notesFeed);
+					}}
+					onDelete={() => {
+						setNotesFeed(
+							notesFeed.filter(n =>
+								n.id !== note.id
+							)
+						);
+						setCursorPosition(cursorPosition)
 					}}
 					isNew={note.isNew ? true : false}
 				/>
