@@ -16,6 +16,7 @@ export const config = {
 export default async function handle(req) {
 
 	const { firstIncrementIndex, newId } = req.body;
+	const session = await getSession({ req });
 
 	const updatePosts = await prisma.note.updateMany({
 		where: {
@@ -25,6 +26,8 @@ export default async function handle(req) {
 			NOT: {
 				id: newId
 			},
+			// @ts-ignore
+			authorId: session.user.id
 		},
 		data: {
 			sort: {

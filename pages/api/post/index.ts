@@ -22,6 +22,8 @@ export default async function handle(req, res) {
 
 	const updatePosts = await prisma.note.updateMany({
 		where: {
+			// @ts-ignore
+			authorId: session.user.id,
 			sort: {
 				gt: sort-1
 			},
