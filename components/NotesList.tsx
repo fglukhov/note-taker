@@ -15,7 +15,7 @@ const NotesList: React.FC<Props> = (props) => {
 	//const [focusId, setFocusId] = useState(null);
 	const [isEditTitle, setIsEditTitle] = useState(false);
 	const [lastKey, setLastKey] = useState(null);
-	const [cursorPosition, setCursorPosition] = useState(null);
+	const [cursorPosition, setCursorPosition] = useState(-1);
 
 	// Initial notes order
 
