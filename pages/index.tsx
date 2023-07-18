@@ -7,7 +7,7 @@ import prisma from '../lib/prisma';
 import {getSession} from "next-auth/react";
 
 
-// index.tsx
+// index.tsx test
 export const getServerSideProps: GetServerSideProps = async (context) => {
 
 	const session = await getSession(context);
