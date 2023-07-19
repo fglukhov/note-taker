@@ -26,7 +26,8 @@ model Note {
 	author    User?   @relation(fields: [authorId], references: [id])
 	authorId  String?
 	createdAt DateTime  @default(now())
-	sort     Int @default(1)
+	sort     	Int @default(1)
+	childIds	String[]
 }
 
 model Account {

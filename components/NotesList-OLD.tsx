@@ -1,4 +1,4 @@
-import React, {useState, useEffect, useRef} from "react";
+import React, {useState} from "react";
 //import { useImmer } from 'use-immer';
 import NotesListItem from "./NotesListItem";
 import {NotesListItemProps} from "./NotesListItem";
@@ -10,32 +10,6 @@ type Props = {
 
 const NotesList: React.FC<Props> = (props) => {
 
-	const notesListRef = useRef();
-
-	useEffect(() => {
-
-		let notesListElement = notesListRef.current;
-		let notesListElements = notesListElement.getElementsByClassName("notes-list-item");
-
-		for (let i=0; i<notesListElements.length; i++) {
-
-			notesListElements[i].setAttribute("data-position", i);
-
-		}
-
-	}, []);
-
-
-
-	// const initialFeed = props.feed.map((n,i) => {
-	// 	return {
-	// 		...n,
-	// 		position: i,
-	// 	}
-	// });
-	//
-	// console.log(initialFeed)
-
 	const [notesFeed, setNotesFeed] = useState(props.feed);
 
 	//console.log(notesFeed)
@@ -43,7 +17,6 @@ const NotesList: React.FC<Props> = (props) => {
 	const [isEditTitle, setIsEditTitle] = useState(false);
 	const [lastKey, setLastKey] = useState(null);
 	const [cursorPosition, setCursorPosition] = useState(-1);
-	//const [parentId, setParentId] = useState(null);
 
 	const allChildIds = [];
 
@@ -53,7 +26,7 @@ const NotesList: React.FC<Props> = (props) => {
 		})
 	});
 
-	//console.log(allChildIds)
+	console.log(allChildIds)
 
 	// Initial notes order
 
@@ -95,8 +68,6 @@ const NotesList: React.FC<Props> = (props) => {
 		if (!isEditTitle) {
 
 			if (eventKey === "ArrowUp" || eventKey === "ArrowDown") {
-
-
 
 				setLastKey(null);
 				clearTimeout(timeout);
@@ -144,28 +115,16 @@ const NotesList: React.FC<Props> = (props) => {
 				clearTimeout(timeout);
 				setLastKey(null);
 
-				// TODO перенести это в добавление вложенной заметки по Ctrl+Enter
-
-				let parentId = notesFeed.filter((f, i) => {
-					return i === cursorPosition;
-				})[0].parentId;
-
-				console.log("parent id: "+ parentId)
-
-				let newId = crypto.randomUUID();
-
 				let newNote:NotesListItemProps = {
-					id: newId,
+					id: crypto.randomUUID(),
 					title: "",
 					sort: cursorPosition + 1,
-					position: cursorPosition + 1,
 					isNew: true,
-					parentId: parentId,
 					childIds: []
 				}
 
 				const insertAt = cursorPosition + 1; // Could be any index
-				let newFeed = [
+				const newFeed = [
 					// Items before the insertion point:
 					...notesFeed.slice(0, insertAt),
 					// New item:
@@ -173,28 +132,6 @@ const NotesList: React.FC<Props> = (props) => {
 					// Items after the insertion point:
 					...notesFeed.slice(insertAt)
 				];
-
-				if (parentId !== null) {
-
-					newFeed = newFeed.map((n) => {
-
-						if (n.id === parentId) {
-							return {
-								...n,
-								childIds: [
-									...n.childIds,
-									newId
-								]
-							}
-						} else {
-							return n;
-						}
-
-					});
-
-					console.log(newFeed)
-
-				}
 
 				setTimeout(function () {
 
@@ -207,7 +144,7 @@ const NotesList: React.FC<Props> = (props) => {
 				}, 10);
 
 			}
-
+			
 
 		}
 
@@ -218,63 +155,32 @@ const NotesList: React.FC<Props> = (props) => {
 
 	useKeyPress([], onKeyPress);
 
-	const handleCancel = (isNewParam, noteId) => {
-
-		setIsEditTitle(false);
-		if (isNewParam) {
-			setNotesFeed(
-				notesFeed.filter(n =>
-					n.id !== noteId
-				)
-			);
-			setCursorPosition(cursorPosition - 1)
-
-		}
-
-	}
-	const handleFocus = (id, pId) => {
-
-		//console.log(pId);
-
-		//setParentId('test');
-		//console.log('111');
-
-	}
-
-
 	return (
-		<div className="notes-list" ref={notesListRef}>
-
-			<div>{cursorPosition}</div>
-
+		<div className="notes-list">
 			{notesFeed.map((note, i) => {
 
 				if (!allChildIds.includes(note.id)) {
 
-					note.parentId = null;
-
-					let pId = null;
-
-
-
 					return (
 						<NotesListItem
-
 							key={note.id}
 							id={note.id}
 							sort={note.sort}
 							title={note.title}
-							feed={notesFeed}
-							parentId={note.parentId}
+							feed={note.feed}
 							childIds={note.childIds}
-							position={i}
-							cursorPosition={cursorPosition}
 							isFocus={i === cursorPosition}
 							isEdit={(i === cursorPosition && isEditTitle)}
-							isEditTitle={isEditTitle}
-							onCancel={handleCancel}
-							onFocus={() => {
-								handleFocus(note.id, pId)
+							onCancel={(isNewParam) => {
+								setIsEditTitle(false);
+								if (isNewParam) {
+									setNotesFeed(
+										notesFeed.filter(n =>
+											n.id !== note.id
+										)
+									);
+									setCursorPosition(cursorPosition-1)
+								}
 							}}
 							onEdit={() => {setIsEditTitle(false)}}
 							onAdd={() => {
@@ -300,7 +206,5 @@ const NotesList: React.FC<Props> = (props) => {
 
 	);
 };
-
-
 
 export default NotesList;
