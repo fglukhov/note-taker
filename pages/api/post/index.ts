@@ -9,8 +9,6 @@ import prisma from '../../../lib/prisma';
 export default async function handle(req, res) {
 	const { id, title, content, sort, parentId } = req.body;
 
-	console.log(parentId)
-
 	const session = await getSession({ req });
 	const result = await prisma.note.create({
 		data: {
