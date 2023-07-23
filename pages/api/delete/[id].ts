@@ -2,24 +2,30 @@
 
 import prisma from '../../../lib/prisma';
 import {getSession} from "next-auth/react";
+import {removeFamily} from "../../../components/NotesList";
 
 // DELETE /api/delete/:id
 export default async function handle(req, res) {
 
 	const noteId = req.query.id;
 
-	const { id, title, sort } = req.body;
-
-	console.log(sort)
+	const { id, title, sort, remainingIds, deletedCount } = req.body;
 
 	const session = await getSession({ req });
 
 	if (req.method === 'DELETE') {
-		const note = await prisma.note.delete({
-			where: { id: noteId },
+
+		const deleteNotes = await prisma.note.deleteMany({
+			where: {
+				NOT: {
+					id: {
+						in: remainingIds
+					}
+				}
+			}
 		});
 
-		const updatePosts = await prisma.note.updateMany({
+		const updateSort = await prisma.note.updateMany({
 			where: {
 				// @ts-ignore
 				authorId: session.user.id,
@@ -29,12 +35,12 @@ export default async function handle(req, res) {
 			},
 			data: {
 				sort: {
-					decrement: 1,
+					decrement: deletedCount,
 				}
 			},
-		})
+		});
 
-		res.json(note);
+		res.json(deleteNotes);
 
 	} else {
 		throw new Error(
