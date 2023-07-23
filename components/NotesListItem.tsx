@@ -162,14 +162,14 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
 			{!(props.isEdit && props.isFocus) ? (
 				<div className="notes-list-item-title-wrapper">
 					<div className="notes-item-title">
-						{ props.sort + ": " + title }
+						{ title }
 					</div>
 				</div>
 			) : (
 				<div className="notes-list-item-title-wrapper">
 
 					<div className="notes-item-title-form">
-						<div>{ props.sort }</div>
+
 						<form onSubmit={(e) => {
 							editTitle(e).then(() => {
 								if (!isNew) {
