@@ -7,7 +7,7 @@ import prisma from '../../../lib/prisma';
 // Required fields in body: title
 // Optional fields in body: content
 export default async function handle(req, res) {
-	const { id, title, content, sort } = req.body;
+	const { id, title, content, sort, parentId } = req.body;
 
 	const session = await getSession({ req });
 	const result = await prisma.note.create({
@@ -17,10 +17,11 @@ export default async function handle(req, res) {
 			sort: sort,
 			content: content,
 			author: { connect: { email: session?.user?.email } },
+			parentId: parentId,
 		},
 	});
 
-	const updatePosts = await prisma.note.updateMany({
+	const updateSort = await prisma.note.updateMany({
 		where: {
 			// @ts-ignore
 			authorId: session.user.id,

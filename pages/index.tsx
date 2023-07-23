@@ -2,10 +2,9 @@ import React, {ReactNode, useState} from "react"
 import { GetServerSideProps } from "next"
 import Layout from "../components/Layout"
 import NotesList from "../components/NotesList"
-import { NoteProps } from "../components/Note"
+import { NotesListItemProps } from "../components/NotesListItem"
 import prisma from '../lib/prisma';
 import {getSession} from "next-auth/react";
-
 
 // index.tsx test
 export const getServerSideProps: GetServerSideProps = async (context) => {
@@ -26,6 +25,8 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
 			}
 		});
 
+
+
 	}
 
 	return {
@@ -35,7 +36,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
 };
 
 type Props = {
-	feed: NoteProps[],
+	feed: NotesListItemProps[],
 	session: any,
 }
 
