@@ -1,4 +1,4 @@
-import React, {useState} from "react";
+import React, {useState, useEffect, useRef} from "react";
 //import { useImmer } from 'use-immer';
 import NotesListItem from "./NotesListItem";
 import {NotesListItemProps} from "./NotesListItem";
@@ -10,15 +10,18 @@ type Props = {
 
 const NotesList: React.FC<Props> = (props) => {
 
+	const eventKeyRef = useRef(null);
+	const lastKeyRef = useRef(null);
+	const focusId = useRef(null);
+
+	const [cursorPosition, setCursorPosition] = useState(null);
 	const [notesFeed, setNotesFeed] = useState(props.feed);
 
-	//console.log(notesFeed)
-
 	const [isEditTitle, setIsEditTitle] = useState(false);
-	const [lastKey, setLastKey] = useState(null);
-	const [cursorPosition, setCursorPosition] = useState(-1);
 
 	const allChildIds = [];
+
+	console.log(notesFeed)
 
 	notesFeed.map(n => {
 		n.childIds.map(cid => {
@@ -26,30 +29,11 @@ const NotesList: React.FC<Props> = (props) => {
 		})
 	});
 
-	console.log(allChildIds)
-
-	// Initial notes order
-
-	let initialOrder = [];
-
-	for (let i = 0; i < notesFeed.length; i++) {
-
-		initialOrder.push({
-			id: notesFeed[i].id,
-			position: i
-		});
-
-	}
-
-
-
 	const onKeyPress = (event) => {
 
-		let eventKey = event.key;
+		eventKeyRef.current = event.key;
 
-		// Setting last pressed key
-
-		setLastKey(eventKey);
+		console.log(eventKeyRef.current + " : " + lastKeyRef.current)
 
 		let timeout = null;
 
@@ -61,62 +45,73 @@ const NotesList: React.FC<Props> = (props) => {
 
 			// Setting last pressed key to null if 1 second have passed
 
-			setLastKey(null);
+			lastKeyRef.current = null;
 
 		}, 1000);
 
 		if (!isEditTitle) {
 
-			if (eventKey === "ArrowUp" || eventKey === "ArrowDown") {
+			if (eventKeyRef.current === "ArrowUp" || eventKeyRef.current === "ArrowDown") {
 
-				setLastKey(null);
+				lastKeyRef.current = null;
 				clearTimeout(timeout);
 
-				if (eventKey === "ArrowUp" && cursorPosition > 0) {
-					setCursorPosition(cursorPosition-1);
-				} else if (eventKey === "ArrowDown" && cursorPosition < notesFeed.length - 1 && cursorPosition !== null) {
-					setCursorPosition(cursorPosition+1);
-				} else if (eventKey === "ArrowDown" && cursorPosition === null) {
+				if (eventKeyRef.current === "ArrowUp" && cursorPosition > 0) {
+					setCursorPosition(cursorPosition - 1);
+				} else if (eventKeyRef.current === "ArrowDown" && cursorPosition < notesFeed.length - 1 && cursorPosition !== null) {
+					setCursorPosition(cursorPosition + 1);
+				} else if (eventKeyRef.current === "ArrowDown" && cursorPosition === null) {
 					setCursorPosition(0);
 				}
+
 
 			}
 
 			// Edit note title on "ee"
 
-			if (eventKey === "e" && lastKey === "e") {
+			if (eventKeyRef.current === "e" && lastKeyRef.current === "e") {
+
+				console.log('edit')
 
 				clearTimeout(timeout);
-				setLastKey(null);
+				lastKeyRef.current = null;
 
 				setTimeout(function () {
 
 					setIsEditTitle(true);
 
-				},10)
+				},1)
 
 			}
 
-		}
-
-		if (eventKey == "Escape") {
-
-			clearTimeout(timeout);
-			setLastKey(null);
-
-			//setIsEditTitle(false);
-
-		}
-
-		if (eventKey == "Enter") {
-
-			if (!isEditTitle) {
+			if (eventKeyRef.current == "Enter") {
 
 				clearTimeout(timeout);
-				setLastKey(null);
+				lastKeyRef.current = null;
+
+				// TODO перенести это в добавление вложенной заметки по Ctrl+Enter
+
+				let newId = crypto.randomUUID();
+
+				let parentId = null;
+
+				if (event.shiftKey === true) {
+
+					console.log(focusId.current)
+
+					parentId = focusId.current;
+
+				} else {
+
+					parentId = notesFeed.filter((f, i) => {
+						return f.sort === cursorPosition;
+					})[0].parentId;
+
+				}
+
 
 				let newNote:NotesListItemProps = {
-					id: crypto.randomUUID(),
+					id: newId,
 					title: "",
 					sort: cursorPosition + 1,
 					isNew: true,
@@ -124,7 +119,7 @@ const NotesList: React.FC<Props> = (props) => {
 				}
 
 				const insertAt = cursorPosition + 1; // Could be any index
-				const newFeed = [
+				let newFeed = [
 					// Items before the insertion point:
 					...notesFeed.slice(0, insertAt),
 					// New item:
@@ -132,6 +127,33 @@ const NotesList: React.FC<Props> = (props) => {
 					// Items after the insertion point:
 					...notesFeed.slice(insertAt)
 				];
+
+				if (parentId !== null) {
+
+					newFeed = newFeed.map((n) => {
+
+						if (n.id === parentId) {
+							return {
+								...n,
+								childIds: [
+									...n.childIds,
+									newId
+								]
+							}
+						} else {
+							if (n.sort > cursorPosition && n.id != newId) {
+								return {
+									...n,
+									sort: n.sort + 1
+								}
+							} else {
+								return n;
+							}
+						}
+
+					});
+
+				}
 
 				setTimeout(function () {
 
@@ -141,59 +163,159 @@ const NotesList: React.FC<Props> = (props) => {
 
 					setCursorPosition(cursorPosition + 1);
 
-				}, 10);
+				}, 1);
+
+
 
 			}
-			
+
+		} else {
+
+			// clearTimeout(timeout);
+			// lastKeyRef.current = null;
 
 		}
 
+		if (eventKeyRef.current == "Escape") {
 
+			clearTimeout(timeout);
+			lastKeyRef.current = null;
+
+			//setIsEditTitle(false);
+
+		}
+
+		// Setting last pressed key
+
+		lastKeyRef.current = eventKeyRef.current;
 
 	};
 
 
 	useKeyPress([], onKeyPress);
 
+	const handleCancel = (isNewParam, noteId) => {
+
+		setIsEditTitle(false);
+
+		if (isNewParam) {
+
+			let newFeed = notesFeed.map((n) => {
+
+				if (n.sort > cursorPosition) {
+					return {
+						...n,
+						sort: n.sort - 1
+					}
+				} else {
+					return n;
+				}
+
+			});
+
+			newFeed = newFeed.map((n) => {
+
+				if (n.childIds.includes(noteId)) {
+					return {
+						...n,
+						childIds: n.childIds.filter((id) => (id !== noteId))
+					}
+				} else {
+					return n;
+				}
+
+			});
+
+			newFeed = newFeed.filter(n =>
+				n.id !== noteId
+			);
+
+			setNotesFeed(newFeed);
+
+			setCursorPosition(cursorPosition - 1);
+
+		}
+
+	}
+
+	const handleDelete = (noteId) => {
+
+		console.log(notesFeed)
+
+		let newFeed = notesFeed.map((n) => {
+
+			if (n.childIds.includes(noteId)) {
+				return {
+					...n,
+					childIds: n.childIds.filter((id) => (id !== noteId))
+				}
+			} else {
+				return n;
+			}
+
+		});
+
+		newFeed = newFeed.filter(n =>
+			n.parentId !== noteId
+		);
+
+		newFeed = newFeed.filter(n =>
+			n.id !== noteId
+		);
+
+		let deletedCount = notesFeed.length - newFeed.length;
+
+		newFeed = newFeed.map((n, i) => {
+
+			if (n.sort > cursorPosition) {
+				return {
+					...n,
+					sort: n.sort - deletedCount
+				}
+			} else {
+				return n;
+			}
+
+		});
+
+		setNotesFeed(newFeed);
+
+		setCursorPosition(cursorPosition)
+
+	}
+
 	return (
 		<div className="notes-list">
+
 			{notesFeed.map((note, i) => {
 
 				if (!allChildIds.includes(note.id)) {
 
+					let parentId = null;
+
 					return (
 						<NotesListItem
+
 							key={note.id}
 							id={note.id}
 							sort={note.sort}
 							title={note.title}
-							feed={note.feed}
+							feed={notesFeed}
+							parentId={parentId}
 							childIds={note.childIds}
-							isFocus={i === cursorPosition}
-							isEdit={(i === cursorPosition && isEditTitle)}
-							onCancel={(isNewParam) => {
-								setIsEditTitle(false);
-								if (isNewParam) {
-									setNotesFeed(
-										notesFeed.filter(n =>
-											n.id !== note.id
-										)
-									);
-									setCursorPosition(cursorPosition-1)
-								}
+							cursorPosition={cursorPosition}
+							isFocus={note.sort === cursorPosition}
+							isEdit={note.sort === cursorPosition && isEditTitle}
+							isEditTitle={isEditTitle}
+							onCancel={handleCancel}
+							onFocus={(curId) => {
+								focusId.current = curId;
 							}}
 							onEdit={() => {setIsEditTitle(false)}}
 							onAdd={() => {
 								setIsEditTitle(false);
 							}}
-							onDelete={() => {
-								setNotesFeed(
-									notesFeed.filter(n =>
-										n.id !== note.id
-									)
-								);
-								setCursorPosition(cursorPosition)
-							}}
+							onDelete={handleDelete}
 							isNew={note.isNew ? true : false}
 						/>
 					)
@@ -206,5 +328,7 @@ const NotesList: React.FC<Props> = (props) => {
 
 	);
 };
+
+
 
 export default NotesList;
