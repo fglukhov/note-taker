@@ -1,0 +1,58 @@
+@import "assets/scss/vars";
+
+.notes_list_item {
+	color: $basic-color;
+}
+
+.notes_list_item + .notes_list_item {
+	margin-top: 1px;
+}
+
+.notes_list_item .notes_list_item {
+	margin-left: 20px;
+}
+
+.notes_list_item_title_wrapper + .notes_list_item {
+	margin-top: 1px;
+}
+
+.notes_list_item_title_wrapper {
+	background: white;
+	transition: box-shadow 0.1s ease-in;
+	padding: 8px 20px;
+	border-radius: 4px;
+	font-size: 16px;
+	line-height: 1.4;
+}
+
+.notes_list_item.focus > .notes_list_item_title_wrapper {
+	background: #d1eaff;
+}
+
+.notes_list_item_title_wrapper:hover {
+	box-shadow: 1px 1px 3px #aaa;
+}
+
+.notes_list_item_form {
+	margin: -3px -10px;
+}
+
+.notes_list_item_title_wrapper input {
+	font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto, Helvetica,Arial,sans-serif,"Apple Color Emoji","Segoe UI Emoji", "Segoe UI Symbol";
+	border: none;
+	display: block;
+	font-size: 16px;
+	line-height: 1.4;
+	padding: 3px 10px;
+	width: 100%;
+	border-radius: 2px;
+}
+
+.notes_list_item_title_wrapper input:focus {
+	outline: 1px solid #989898;
+}
+
+.notes_list_item.complete > .notes_list_item_title_wrapper {
+	text-decoration: line-through;
+	color: $gray-color;
+}
