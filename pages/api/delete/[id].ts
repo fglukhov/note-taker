@@ -2,7 +2,6 @@
 
 import prisma from '../../../lib/prisma';
 import {getSession} from "next-auth/react";
-import {removeFamily} from "../../../components/NotesList";
 
 // DELETE /api/delete/:id
 export default async function handle(req, res) {

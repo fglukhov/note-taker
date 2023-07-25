@@ -28,6 +28,7 @@ model Note {
 	createdAt DateTime @default(now())
 	sort      Int      @default(1)
 	parentId  String?
+	complete  Boolean  @default(false)
 }
 
 model Account {

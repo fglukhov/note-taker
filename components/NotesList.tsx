@@ -3,6 +3,7 @@ import React, {useState, useEffect, useRef} from "react";
 import NotesListItem from "./NotesListItem";
 import {NotesListItemProps} from "./NotesListItem";
 import {useKeyPress} from '../lib/useKeyPress';
+import styles from './NotesList.module.scss'
 
 type Props = {
 	feed: NotesListItemProps[]
@@ -21,9 +22,9 @@ const NotesList: React.FC<Props> = (props) => {
 
 	const onKeyPress = (event) => {
 
-		eventKeyRef.current = event.key;
+		eventKeyRef.current = event.code;
 
-		console.log(eventKeyRef.current + " : " + lastKeyRef.current)
+		console.log(event)
 
 		let timeout = null;
 
@@ -59,7 +60,7 @@ const NotesList: React.FC<Props> = (props) => {
 
 			// Edit note title on "ee"
 
-			if (eventKeyRef.current === "e" && lastKeyRef.current === "e") {
+			if (eventKeyRef.current === "KeyE" && lastKeyRef.current === "KeyE") {
 
 				clearTimeout(timeout);
 				lastKeyRef.current = null;
@@ -83,26 +84,91 @@ const NotesList: React.FC<Props> = (props) => {
 
 				let parentId;
 
-				if (event.shiftKey === true) {
+				let insertChild = false;
 
-					parentId = focusId.current;
+				if (!notesFeed.length) {
+
+					parentId = "root";
 
 				} else {
 
-					parentId = curElement.parentId;
+					if (event.shiftKey === true) {
+
+						insertChild = true;
+
+						parentId = focusId.current;
+
+					} else {
+
+						parentId = curElement.parentId;
+
+					}
 
 				}
 
-				const nextElement = notesFeed.find(n => (n.parentId === parentId && n.sort > cursorPosition));
-
-				//const insertAt = cursorPosition + 1; // Could be any index
-
 				let insertAt;
 
-				if (nextElement !== undefined) {
-					insertAt = nextElement.sort;
+				if (!notesFeed.length) {
+
+					insertAt = 0;
+
 				} else {
-					insertAt = curElement.sort + 1;
+
+					if (insertChild) {
+
+						// Вложенный элемент всегда вставляется на следующую позицию за текущей
+
+						insertAt = curElement.sort + 1
+
+					} else {
+
+						const nextSibling = notesFeed.find(n => (n.parentId === parentId && n.sort > cursorPosition));
+
+						if (nextSibling !== undefined) {
+
+							insertAt = nextSibling.sort;
+
+						} else {
+
+							const closestParent = notesFeed.find(n => (n.id === parentId));
+							let closestParentNextSibling;
+
+							if (closestParent !== undefined) {
+
+								// Есть общий родитель
+
+								closestParentNextSibling = notesFeed.find(n => (n.parentId === closestParent.parentId && n.sort > cursorPosition));
+
+								if (closestParentNextSibling !== undefined) {
+
+									// Есть следующий за общим родителем элемент
+
+									insertAt = closestParentNextSibling.sort
+
+								} else {
+
+									// Нет следующего за общим родителем элемента
+
+									insertAt = notesFeed.length;
+
+								}
+
+							} else {
+
+								// Нет общего родителя
+
+								insertAt = notesFeed.length
+
+							}
+
+						}
+
+
+
+
+
+					}
+
 				}
 
 				let newNote:NotesListItemProps = {
@@ -177,6 +243,8 @@ const NotesList: React.FC<Props> = (props) => {
 
 	const handleCancel = (isNewParam, noteId) => {
 
+		// TODO Если добавлена не вложенная заметка, возвращать курсор на предыдущую
+
 		setIsEditTitle(false);
 
 		if (isNewParam) {
@@ -208,7 +276,6 @@ const NotesList: React.FC<Props> = (props) => {
 
 	const handleDelete = (noteId) => {
 
-
 		const currentSort = notesFeed.find(n => n.id == noteId).sort;
 
 		console.log("noteId: " + noteId)
@@ -239,73 +306,171 @@ const NotesList: React.FC<Props> = (props) => {
 
 	}
 
-	return (
-		<div className="notes-list">
+	const handleComplete = (noteId, isComplete) => {
 
-			{notesFeed.map((note, i) => {
+		// @ts-ignore
+		let removedFeed = removeFamily(noteId, notesFeed);
 
-				if (note.parentId === "root") {
+		let remainingIds = removedFeed.map(n => (n.id));
 
-					return (
-						<NotesListItem
+		let allIds = notesFeed.map(n => (n.id));
 
-							key={note.id}
-							id={note.id}
-							sort={note.sort}
-							title={note.title}
-							feed={notesFeed}
-							parentId={note.parentId}
-							cursorPosition={cursorPosition}
-							isFocus={note.sort === cursorPosition}
-							isEdit={note.sort === cursorPosition && isEditTitle}
-							isEditTitle={isEditTitle}
-							onCancel={handleCancel}
-							onFocus={(curId) => {
-								focusId.current = curId;
-							}}
-							onEdit={() => {setIsEditTitle(false)}}
-							onAdd={() => {
-								setIsEditTitle(false);
-							}}
-							onDelete={handleDelete}
-							isNew={note.isNew ? true : false}
-						/>
-					)
+		let completeIds = [];
 
+		allIds.map((id) => {
+			if (!remainingIds.includes(id)) {
+				completeIds.push(id);
+			}
+		});
+
+		console.log(isComplete)
+
+		console.log(completeIds)
+
+		let newFeed = notesFeed.map(n => {
+			if (completeIds.includes(n.id)) {
+				return {
+					...n,
+					complete: !isComplete
 				}
+			} else {
+				return n;
+			}
+		});
 
-			})}
+		setTimeout(function () {
+			setNotesFeed(newFeed);
+		},1)
 
+	}
+
+	return (
+		<div className="row">
+			<div className={`col ${styles.notes_list_col_1}`}>
+				<div className={styles.notes_list}>
+
+					{notesFeed.map((note, i) => {
+
+						if (note.parentId === "root") {
+
+							return (
+								<NotesListItem
+
+									key={note.id}
+									id={note.id}
+									sort={note.sort}
+									title={note.title}
+									complete={note.complete}
+									feed={notesFeed}
+									parentId={note.parentId}
+									cursorPosition={cursorPosition}
+									isFocus={note.sort === cursorPosition}
+									isEdit={note.sort === cursorPosition && isEditTitle}
+									isEditTitle={isEditTitle}
+									onCancel={handleCancel}
+									onFocus={(curId) => {
+										focusId.current = curId;
+									}}
+									onEdit={() => {
+										setIsEditTitle(false)
+									}}
+									onAdd={() => {
+										setIsEditTitle(false);
+									}}
+									onDelete={handleDelete}
+									onComplete={handleComplete}
+									isNew={note.isNew ? true : false}
+								/>
+							)
+
+						}
+
+					})}
+
+				</div>
+			</div>
+			<div className={`col ${styles.notes_list_col_2}`}>
+				<div className={styles.sidebar_hints}>
+					<div className={styles.hints_list}>
+						<div className={styles.hints_item}>
+							<div className={styles.hints_item_key}>
+								<div className={styles.key}>Enter</div>
+							</div>
+							<div className={styles.hints_item_descr}>
+								Add note
+							</div>
+						</div>
+						<div className={styles.hints_item}>
+							<div className={styles.hints_item_key}>
+								<div className={styles.key}>Shift + Enter</div>
+							</div>
+							<div className={styles.hints_item_descr}>
+								Add a sub-item
+							</div>
+						</div>
+						<div className={styles.hints_item}>
+							<div className={styles.hints_item_key}>
+								<div className={styles.key}>ee</div>
+							</div>
+							<div className={styles.hints_item_descr}>
+								Edit title
+							</div>
+						</div>
+						<div className={styles.hints_item}>
+							<div className={styles.hints_item_key}>
+								<div className={styles.key}>ee</div>
+							</div>
+							<div className={styles.hints_item_descr}>
+								Edit title
+							</div>
+						</div>
+						<div className={styles.hints_item}>
+							<div className={styles.hints_item_key}>
+								<div className={styles.key}>Spacebar</div>
+							</div>
+							<div className={styles.hints_item_descr}>
+								Complete/reopen
+							</div>
+						</div>
+						<div className={styles.hints_item}>
+							<div className={styles.hints_item_key}>
+								<div className={styles.key}>Del</div>
+							</div>
+							<div className={styles.hints_item_descr}>
+								Delete
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
 		</div>
 
 	);
 };
 
 export const removeFamily =
-	( id
-		, [ node, ...more ] = []
-		, s = new Set ([ id ])
-		, r = []
-	) =>
-	{ if (node === undefined)
-		return r               // 1
-	else if (s .has (node.id) || s .has (node.parentId))
-	{
-		return removeFamily    // 2
-			( id
-				// @ts-ignore
-				, [ ...r, ...more ]
-				, s .add (node.id)
-				, []
-			)
-	}
-	else
-		return removeFamily    // 3
-			( id
-				, more
-				, s
-				, [ ...r, node ]
-			)
+	(id,
+	 [node, ...more] = [],
+	 s = new Set([id]),
+	 r = []
+	) => {
+		if (node === undefined)
+			return r               // 1
+		else if (s.has(node.id) || s.has(node.parentId)) {
+			return removeFamily    // 2
+				(id
+					// @ts-ignore
+					, [...r, ...more]
+					, s.add(node.id)
+					, []
+				)
+		} else
+			return removeFamily    // 3
+				(id
+					, more
+					, s
+					, [...r, node]
+				)
 	}
 
 export default NotesList;

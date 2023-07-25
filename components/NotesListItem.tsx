@@ -1,9 +1,7 @@
-import React, {ReactNode, useState} from "react";
+import React, {ReactNode, useState, useRef} from "react";
 import {useKeyPress} from '../lib/useKeyPress';
 import {removeFamily} from "./NotesList";
-//import {useReducer} from "react";
-//import ReactMarkdown from "react-markdown";
-//import children = ReactMarkdown.propTypes.children;
+import styles from './NotesListItem.module.scss'
 
 export type NotesListItemProps = {
 	id: string;
@@ -21,8 +19,10 @@ export type NotesListItemProps = {
 	onCancel?: (isNewParam, noteId) => any;
 	onEdit?: () => any;
 	onAdd?: () => any;
+	onComplete?: (noteId, isComplete) => any;
 	onDelete?: (noteId, parentId) => any;
 	parentId?: string;
+	complete?: boolean;
 }
 
 const NotesListItem: React.FC<NotesListItemProps> = (props) => {
@@ -33,19 +33,23 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
 	const sort = props.sort;
 	const [prevTitle, setPrevTitle] = useState(props.title);
 	const [isNew, setIsNew] = useState(props.isNew);
+	//const [complete, setComplete] = useState(props.complete);
+
+	const eventKeyRef = useRef(null);
+	const lastKeyRef = useRef(null);
 
 	//const [ignored, forceUpdate] = useReducer(x => x + 1, 0);
 
 	const deleteNote = async () => {
 
 		// @ts-ignore
-		const newFeed = removeFamily(id, props.feed);
+		let newFeed = removeFamily(id, props.feed);
 
-		const remainingIds = newFeed.map(n => (n.id));
+		let remainingIds = newFeed.map(n => (n.id));
 
-		const deletedCount = props.feed.length - newFeed.length;
+		let deletedCount = props.feed.length - newFeed.length;
 
-		const body = { id, title, sort, remainingIds, deletedCount };
+		let body = { id, title, sort, remainingIds, deletedCount };
 
 		await fetch(`/api/delete/${id}`, {
 			method: 'DELETE',
@@ -54,14 +58,47 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
 		});
 
 	}
+	const completeNote = async () => {
+
+		// @ts-ignore
+		let removedFeed = removeFamily(id, props.feed);
+
+		let remainingIds = removedFeed.map(n => (n.id));
+
+		let allIds = props.feed.map(n => (n.id));
+
+		let completeIds = [];
+
+		allIds.map((id) => {
+			if (!remainingIds.includes(id)) {
+				completeIds.push(id);
+			}
+		});
+
+		let isComplete = false;
+
+		if (props.feed.find(n => n.id === id).complete === true) {
+			isComplete = true;
+		}
+
+		let body = { completeIds, isComplete };
+
+		await fetch(`/api/complete/${id}`, {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify(body),
+		});
+
+	}
 
 	const onKeyPress = (event) => {
-		let eventKey = event.key;
+
+		eventKeyRef.current = event.code;
 
 		// console.log(eventKey);
 		// console.log(props.isFocus);
 
-		if (eventKey == "Escape") {
+		if (eventKeyRef.current == "Escape") {
 
 			if (props.isFocus) {
 
@@ -81,15 +118,25 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
 
 		}
 
-		if (eventKey == "Delete") {
+		if (eventKeyRef.current == "Delete") {
 
 
 			if (!props.isEdit && props.isFocus) {
 
-				console.log("delete")
-
 				deleteNote().then(() => {
 					props.onDelete(id, parentId);
+				});
+
+			}
+
+		}
+
+		if (eventKeyRef.current == "Space") {
+
+			if (!props.isEdit && props.isFocus) {
+
+				completeNote().then(() => {
+					props.onComplete(id, props.complete);
 				});
 
 			}
@@ -145,8 +192,6 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
 
 		}
 
-
-
 	};
 
 	useKeyPress([], onKeyPress);
@@ -157,18 +202,18 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
 
 	return (
 
-		<div className={"notes-list-item " + (props.isFocus ? "focus" : "")} id={props.id}>
+		<div className={styles.notes_list_item + (props.isFocus ? " "+styles.focus : "") + (props.complete ? " "+styles.complete : "")} id={props.id}>
 
 			{!(props.isEdit && props.isFocus) ? (
-				<div className="notes-list-item-title-wrapper">
+				<div className={styles.notes_list_item_title_wrapper}>
 					<div className="notes-item-title">
 						{ title }
 					</div>
 				</div>
 			) : (
-				<div className="notes-list-item-title-wrapper">
+				<div className={styles.notes_list_item_title_wrapper}>
 
-					<div className="notes-item-title-form">
+					<div className={styles.notes_list_item_form}>
 
 						<form onSubmit={(e) => {
 							editTitle(e).then(() => {
@@ -204,6 +249,7 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
 							id={childNote.id}
 							sort={childNote.sort}
 							title={childNote.title}
+							complete={childNote.complete}
 							feed={props.feed}
 							parentId={childNote.parentId}
 							cursorPosition={props.cursorPosition}
@@ -211,6 +257,7 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
 							isEdit={(childNote.sort === props.cursorPosition && props.isEditTitle)}
 							isEditTitle={props.isEditTitle}
 							onFocus={props.onFocus}
+							onComplete={props.onComplete}
 							onCancel={props.onCancel}
 							onEdit={props.onEdit}
 							onAdd={props.onAdd}
@@ -225,31 +272,8 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
 
 
 			<style jsx>{`
-				.notes-list-item {
-				}
+
 				
-				.notes-list-item-title-wrapper {
-					background: white;
-					transition: box-shadow 0.1s ease-in;
-					padding: 10px 20px;
-				}
-
-				.notes-list-item.focus > .notes-list-item-title-wrapper {
-					background: #d1eaff;
-				}
-
-				.notes-list-item:hover {
-					box-shadow: 1px 1px 3px #aaa;
-				}
-
-				.notes-list-item + .notes-list-item {
-					margin-top: 1px;
-				}
-				
-				.notes-list-item .notes-list-item {
-					margin-left: 30px;
-					margin-top: 1px;
-				}
 				
 			`}</style>
 
