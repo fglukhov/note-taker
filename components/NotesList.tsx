@@ -24,6 +24,10 @@ const NotesList: React.FC<Props> = (props) => {
 
 	const onKeyPress = (event) => {
 
+		if (event.ctrlKey) {
+			event.preventDefault();
+		}
+
 		eventKeyRef.current = event.code;
 
 		let timeout = null;
