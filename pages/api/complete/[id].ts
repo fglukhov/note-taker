@@ -6,11 +6,7 @@ import {getSession} from "next-auth/react";
 // DELETE /api/copmlete/:id
 export default async function handle(req, res) {
 
-	console.log(req.body)
-
 	const { completeIds, isComplete } = req.body;
-
-	console.log("isComplete " + isComplete)
 
 	const session = await getSession({ req });
 

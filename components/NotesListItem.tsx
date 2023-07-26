@@ -1,12 +1,14 @@
 import React, {ReactNode, useState, useRef} from "react";
 import {useKeyPress} from '../lib/useKeyPress';
-import {removeFamily} from "./NotesList";
+import {getFamily, removeFamily} from "./NotesList";
 import styles from './NotesListItem.module.scss'
 
 export type NotesListItemProps = {
 	id: string;
 	title: string;
 	sort?: number;
+	familyCount?: number;
+	position?: number;
 	parentPosition?: number;
 	feed?: NotesListItemProps[];
 	cursorPosition?: number;
@@ -16,11 +18,11 @@ export type NotesListItemProps = {
 	isNew?: boolean;
 	children?: ReactNode;
 	onFocus?: (id) => any;
-	onCancel?: (isNewParam, noteId) => any;
-	onEdit?: () => any;
-	onAdd?: () => any;
+	onCancel?: (isNewParam, noteId, parentId, sort) => any;
+	onEdit?: (noteId, title) => any;
+	onAdd?: (noteId, title) => any;
 	onComplete?: (noteId, isComplete) => any;
-	onDelete?: (noteId, parentId) => any;
+	onDelete?: (noteId, parentId, sort) => any;
 	parentId?: string;
 	complete?: boolean;
 }
@@ -34,6 +36,8 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
 	const [prevTitle, setPrevTitle] = useState(props.title);
 	const [isNew, setIsNew] = useState(props.isNew);
 	//const [complete, setComplete] = useState(props.complete);
+
+
 
 	const eventKeyRef = useRef(null);
 	const lastKeyRef = useRef(null);
@@ -49,7 +53,7 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
 
 		let deletedCount = props.feed.length - newFeed.length;
 
-		let body = { id, title, sort, remainingIds, deletedCount };
+		let body = { id, title, sort, remainingIds, parentId };
 
 		await fetch(`/api/delete/${id}`, {
 			method: 'DELETE',
@@ -95,9 +99,6 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
 
 		eventKeyRef.current = event.code;
 
-		// console.log(eventKey);
-		// console.log(props.isFocus);
-
 		if (eventKeyRef.current == "Escape") {
 
 			if (props.isFocus) {
@@ -110,7 +111,7 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
 
 					}
 
-					props.onCancel(isNew, id);
+					props.onCancel(isNew, id, parentId, sort);
 
 				}
 
@@ -124,7 +125,7 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
 			if (!props.isEdit && props.isFocus) {
 
 				deleteNote().then(() => {
-					props.onDelete(id, parentId);
+					props.onDelete(id, parentId, sort);
 				});
 
 			}
@@ -145,11 +146,8 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
 
 	}
 
-	// test
-
-	// важно: здесь ставим стейт со старым заголовком и используем его при отмене или Esc
-
 	const editTitle = async (e: React.SyntheticEvent) => {
+
 		e.preventDefault();
 
 		if (!isNew) {
@@ -200,6 +198,9 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
 		props.onFocus(props.id);
 	}
 
+	let position = props.position + 1;
+	let familyCount = 0;
+
 	return (
 
 		<div className={styles.notes_list_item + (props.isFocus ? " "+styles.focus : "") + (props.complete ? " "+styles.complete : "")} id={props.id}>
@@ -213,16 +214,20 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
 			) : (
 				<div className={styles.notes_list_item_title_wrapper}>
 
+					<div>
+						{ title }
+					</div>
+
 					<div className={styles.notes_list_item_form}>
 
 						<form onSubmit={(e) => {
 							editTitle(e).then(() => {
 								if (!isNew) {
-									props.onEdit();
+									props.onEdit(id, title);
 								} else {
 									setIsNew(false);
 									setPrevTitle(title);
-									props.onAdd();
+									props.onAdd(id, title);
 								}
 							});
 						}}>
@@ -238,23 +243,30 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
 				</div>
 			)}
 
-
-			{props.feed.map((childNote) => {
+			{props.feed.map((childNote, i) => {
 
 				if (childNote.parentId == props.id) {
+
+					if (i > 0) {
+						position += familyCount;
+					}
+
+					familyCount = getFamily(childNote.id, props.feed).length;
 
 					return (
 						<NotesListItem
 							key={childNote.id}
 							id={childNote.id}
 							sort={childNote.sort}
+							position={position}
+							familyCount={familyCount}
 							title={childNote.title}
 							complete={childNote.complete}
 							feed={props.feed}
 							parentId={childNote.parentId}
 							cursorPosition={props.cursorPosition}
-							isFocus={childNote.sort === props.cursorPosition}
-							isEdit={(childNote.sort === props.cursorPosition && props.isEditTitle)}
+							isFocus={position === props.cursorPosition}
+							isEdit={(position === props.cursorPosition && props.isEditTitle)}
 							isEditTitle={props.isEditTitle}
 							onFocus={props.onFocus}
 							onComplete={props.onComplete}
@@ -262,20 +274,13 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
 							onEdit={props.onEdit}
 							onAdd={props.onAdd}
 							onDelete={props.onDelete}
-							isNew={childNote.isNew ? true : false}
+							isNew={childNote.isNew}
 						/>
 					)
 
 				}
 
 			})}
-
-
-			<style jsx>{`
-
-				
-				
-			`}</style>
 
 		</div>
 
