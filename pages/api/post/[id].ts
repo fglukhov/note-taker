@@ -5,7 +5,6 @@ import prisma from '../../../lib/prisma';
 // DELETE /api/post/:id
 export default async function handle(req, res) {
 	const noteId = req.query.id;
-	console.log(req.query.id)
 	if (req.method === 'DELETE') {
 		const note = await prisma.note.delete({
 			where: { id: noteId },

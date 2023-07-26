@@ -15,7 +15,7 @@ const Header: React.FC = () => {
 		<div className="left">
 			<Link href="/">
 				<a className="bold" data-active={isActive('/')}>
-					Feed
+					Note taker
 				</a>
 			</Link>
 			<style jsx>{`
@@ -47,7 +47,7 @@ const Header: React.FC = () => {
 			<div className="left">
 				<Link href="/">
 					<a className="bold" data-active={isActive('/')}>
-						Feed
+						Note taker
 					</a>
 				</Link>
 				<style jsx>{`
@@ -125,12 +125,6 @@ const Header: React.FC = () => {
 				<Link href="/">
 					<a data-active={isActive('/')}>Notes</a>
 				</Link>
-				<Link href="/blog">
-					<a data-active={isActive('/blog')}>Blog</a>
-				</Link>
-				<Link href="/blog/drafts">
-					<a data-active={isActive('/blog/drafts')}>My drafts</a>
-				</Link>
 				<style jsx>{`
           .bold {
             font-weight: bold;
@@ -160,11 +154,6 @@ const Header: React.FC = () => {
 				<Link href="/create">
 					<button>
 						<a>New note</a>
-					</button>
-				</Link>
-				<Link href="/blog/create">
-					<button>
-						<a>New post</a>
 					</button>
 				</Link>
 				<button onClick={() => signOut()}>
