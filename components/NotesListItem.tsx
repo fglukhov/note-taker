@@ -214,10 +214,6 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
 			) : (
 				<div className={styles.notes_list_item_title_wrapper}>
 
-					<div>
-						{ title }
-					</div>
-
 					<div className={styles.notes_list_item_form}>
 
 						<form onSubmit={(e) => {
