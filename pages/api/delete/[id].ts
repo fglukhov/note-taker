@@ -8,11 +8,27 @@ export default async function handle(req, res) {
 
 	const noteId = req.query.id;
 
-	const { id, title, sort, remainingIds, deletedCount } = req.body;
+	const { id, title, sort, remainingIds, parentId } = req.body;
 
 	const session = await getSession({ req });
 
 	if (req.method === 'DELETE') {
+
+		const updateSort = await prisma.note.updateMany({
+			where: {
+				// @ts-ignore
+				authorId: session.user.id,
+				parentId: parentId,
+				sort: {
+					gt: sort
+				}
+			},
+			data: {
+				sort: {
+					decrement: 1,
+				}
+			},
+		});
 
 		const deleteNotes = await prisma.note.deleteMany({
 			where: {
@@ -22,21 +38,6 @@ export default async function handle(req, res) {
 					}
 				}
 			}
-		});
-
-		const updateSort = await prisma.note.updateMany({
-			where: {
-				// @ts-ignore
-				authorId: session.user.id,
-				sort: {
-					gt: sort
-				}
-			},
-			data: {
-				sort: {
-					decrement: deletedCount,
-				}
-			},
 		});
 
 		res.json(deleteNotes);

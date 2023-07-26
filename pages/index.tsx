@@ -1,7 +1,7 @@
 import React, {ReactNode, useState} from "react"
 import { GetServerSideProps } from "next"
 import Layout from "../components/Layout"
-import NotesList from "../components/NotesList"
+import NotesList, {getFamily} from "../components/NotesList"
 import { NotesListItemProps } from "../components/NotesListItem"
 import prisma from '../lib/prisma';
 import {getSession} from "next-auth/react";
@@ -45,10 +45,12 @@ const Main: React.FC<Props> = (props) => {
   return (
     <Layout>
       <div className="page">
-        <h1>Notes</h1>
         <main>
 					{props.session && (
-						<NotesList feed={props.feed} />
+						<div>
+							<h1>Notes</h1>
+							<NotesList feed={props.feed}/>
+						</div>
 					)}
         </main>
       </div>

@@ -14,17 +14,17 @@ const NotesList: React.FC<Props> = (props) => {
 	const eventKeyRef = useRef(null);
 	const lastKeyRef = useRef(null);
 	const focusId = useRef(null);
+	const prevFocusId = useRef(null);
 
 	const [cursorPosition, setCursorPosition] = useState(null);
 	const [notesFeed, setNotesFeed] = useState(props.feed);
 
 	const [isEditTitle, setIsEditTitle] = useState(false);
 
+
 	const onKeyPress = (event) => {
 
 		eventKeyRef.current = event.code;
-
-		console.log(event)
 
 		let timeout = null;
 
@@ -55,7 +55,6 @@ const NotesList: React.FC<Props> = (props) => {
 					setCursorPosition(0);
 				}
 
-
 			}
 
 			// Edit note title on "ee"
@@ -73,18 +72,161 @@ const NotesList: React.FC<Props> = (props) => {
 
 			}
 
+			// Indent
+
+			if (eventKeyRef.current == "ArrowRight" && event.ctrlKey) {
+
+				let curNote = notesFeed.find(n => n.id==focusId.current);
+
+				let parentId = curNote.parentId;
+
+				const siblingsIds = [];
+
+				notesFeed.map(n => {
+
+					if (n.parentId == parentId) {
+						siblingsIds.push(n.id)
+					}
+
+				});
+
+				let prevSiblingId = null;
+
+				siblingsIds.map((id, i) => {
+
+					if (id === focusId.current && i > 0) {
+
+						prevSiblingId = siblingsIds[i-1];
+
+					}
+
+				});
+
+				// Считаем количество прямых детей нового родительского элемента
+
+				let newSiblingsCount = 0;
+
+				notesFeed.map(n => {
+					if (n.parentId === prevSiblingId) {
+						newSiblingsCount += 1;
+					}
+				});
+
+				let newSort = newSiblingsCount;
+
+				let newParentId = prevSiblingId;
+
+				if (curNote.sort > 0 && prevSiblingId !== null) {
+
+					const newFeed = notesFeed.map((n, i) => {
+						if (n.id === curNote.id) {
+							return {
+								...n,
+								parentId: newParentId,
+								sort: newSort
+							}
+						} else if (n.parentId === curNote.parentId && n.sort > curNote.sort) {
+							return {
+								...n,
+								sort: n.sort - 1
+							}
+						} else {
+							return n;
+						}
+
+					});
+
+					newFeed.sort((a,b) => a.sort - b.sort);
+
+					indentNote(curNote.id, parentId, newParentId, newSort, curNote.sort).then(() => {
+						setNotesFeed(newFeed);
+					});
+
+				}
+
+			}
+
+			// Unindent
+
+			if (eventKeyRef.current == "ArrowLeft" && event.ctrlKey) {
+
+				let curNote = notesFeed.find(n => n.id==focusId.current);
+				let parentId = curNote.parentId;
+
+				let curNoteSiblings = notesFeed.filter(n => n.parentId === curNote.parentId);
+
+				let parentFamily = getFamily(curNote.parentId, notesFeed);
+
+				// @ts-ignore
+				let curNoteFamily = removeFamily(curNote.id, parentFamily);
+
+				let positionShift = 0;
+
+				if (curNote.sort < curNoteSiblings.length-1) {
+					positionShift = curNoteFamily.length - 1;
+				}
+
+				if (parentId !== "root") {
+
+					let curParent =	notesFeed.find(n => n.id==parentId);
+					let newParentId = curParent.parentId;
+
+					let newSort = curParent.sort + 1;
+
+					let newFeed = notesFeed.map((n, i) => {
+						if (n.id === curNote.id) {
+							return {
+								...n,
+								parentId: newParentId,
+								sort: newSort
+							}
+						} else if (n.parentId === newParentId && n.sort > curParent.sort) {
+							return {
+								...n,
+								sort: n.sort + 1
+							}
+						} else if (n.parentId === parentId && n.sort > curNote.sort) {
+							return {
+								...n,
+								sort: n.sort - 1
+							}
+						} else {
+							return n;
+						}
+
+					});
+
+					newFeed.sort((a,b) => a.sort - b.sort);
+
+					let newCursorPosition = null;
+
+
+
+					unindentNote(curNote.id, parentId, newParentId, newSort, curNote.sort, curParent.sort).then(() => {
+						setNotesFeed(newFeed);
+						setCursorPosition(cursorPosition + positionShift)
+					});
+
+				}
+
+			}
+
 			if (eventKeyRef.current == "Enter") {
+
+				prevFocusId.current = focusId.current;
 
 				clearTimeout(timeout);
 				lastKeyRef.current = null;
 
 				let newId = crypto.randomUUID();
 
-				const curElement = notesFeed.find(n => n.sort === cursorPosition);
+				let curElement = notesFeed.find(n => n.id==focusId.current);
 
 				let parentId;
 
 				let insertChild = false;
+
+				let newSort = 0;
 
 				if (!notesFeed.length) {
 
@@ -96,11 +238,13 @@ const NotesList: React.FC<Props> = (props) => {
 
 						insertChild = true;
 
-						parentId = focusId.current;
+						parentId = curElement.id;
 
 					} else {
 
 						parentId = curElement.parentId;
+
+						newSort = curElement.sort + 1;
 
 					}
 
@@ -118,54 +262,11 @@ const NotesList: React.FC<Props> = (props) => {
 
 						// Вложенный элемент всегда вставляется на следующую позицию за текущей
 
-						insertAt = curElement.sort + 1
+						insertAt = cursorPosition + 1;
 
 					} else {
 
-						const nextSibling = notesFeed.find(n => (n.parentId === parentId && n.sort > cursorPosition));
-
-						if (nextSibling !== undefined) {
-
-							insertAt = nextSibling.sort;
-
-						} else {
-
-							const closestParent = notesFeed.find(n => (n.id === parentId));
-							let closestParentNextSibling;
-
-							if (closestParent !== undefined) {
-
-								// Есть общий родитель
-
-								closestParentNextSibling = notesFeed.find(n => (n.parentId === closestParent.parentId && n.sort > cursorPosition));
-
-								if (closestParentNextSibling !== undefined) {
-
-									// Есть следующий за общим родителем элемент
-
-									insertAt = closestParentNextSibling.sort
-
-								} else {
-
-									// Нет следующего за общим родителем элемента
-
-									insertAt = notesFeed.length;
-
-								}
-
-							} else {
-
-								// Нет общего родителя
-
-								insertAt = notesFeed.length
-
-							}
-
-						}
-
-
-
-
+						insertAt = cursorPosition + getFamily(curElement.id, notesFeed).length
 
 					}
 
@@ -174,23 +275,20 @@ const NotesList: React.FC<Props> = (props) => {
 				let newNote:NotesListItemProps = {
 					id: newId,
 					title: "",
-					sort: insertAt,
+					sort: newSort,
+					position: insertAt,
 					isNew: true,
 					parentId: parentId
 				}
 
 				let newFeed = [
-					// Items before the insertion point:
-					...notesFeed.slice(0, insertAt),
-					// New item:
+					...notesFeed,
 					newNote,
-					// Items after the insertion point:
-					...notesFeed.slice(insertAt)
 				];
 
 				newFeed = newFeed.map((n) => {
 
-					if (n.sort >= insertAt && n.id != newId) {
+					if (n.sort >= newSort && n.id != newId && n.parentId == parentId) {
 						return {
 							...n,
 							sort: n.sort + 1
@@ -201,18 +299,15 @@ const NotesList: React.FC<Props> = (props) => {
 
 				});
 
+				newFeed.sort((a,b) => a.sort - b.sort);
 
 				setTimeout(function () {
 
+					setCursorPosition(insertAt);
+					setIsEditTitle(true);
 					setNotesFeed(newFeed);
 
-					setIsEditTitle(true);
-
-					setCursorPosition(insertAt);
-
 				}, 1);
-
-
 
 			}
 
@@ -228,30 +323,101 @@ const NotesList: React.FC<Props> = (props) => {
 			clearTimeout(timeout);
 			lastKeyRef.current = null;
 
-			//setIsEditTitle(false);
-
 		}
-
-		// Setting last pressed key
 
 		lastKeyRef.current = eventKeyRef.current;
 
 	};
 
-
 	useKeyPress([], onKeyPress);
 
-	const handleCancel = (isNewParam, noteId) => {
+	const indentNote = async (noteId: String, parentId: String, newParentId: String, sort: number, oldSort: number) => {
+
+		try {
+			const body = { parentId, newParentId, sort, oldSort };
+			await fetch(`/api/indent/${noteId}`, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify(body),
+			});
+
+		} catch (error) {
+			console.error(error);
+		}
+
+	};
+
+	const unindentNote = async (noteId: String, parentId: String, newParentId: String, sort: number, oldSort: number, parentSort: number) => {
+
+		try {
+			const body = { parentId, newParentId, sort, oldSort, parentSort };
+			await fetch(`/api/unindent/${noteId}`, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify(body),
+			});
+
+		} catch (error) {
+			console.error(error);
+		}
+
+	};
+
+	const handleEdit = (noteId, title) => {
+
+		let newFeed = notesFeed.map((n) => {
+			if (n.id === noteId) {
+				return {
+					...n,
+					title: title
+				}
+			} else {
+				return n;
+			}
+		});
+
+		setTimeout(function () {
+			setNotesFeed(newFeed);
+			setIsEditTitle(false);
+		},1);
+
+
+	}
+
+	const handleAdd = (noteId, title) => {
+
+		let newFeed = notesFeed.map((n) => {
+			if (n.id === noteId) {
+				return {
+					...n,
+					title: title
+				}
+			} else {
+				return n;
+			}
+		});
+
+		setTimeout(function () {
+			setNotesFeed(newFeed);
+			setIsEditTitle(false);
+		},1);
+
+
+	}
+
+	const handleCancel = (isNewParam, noteId, parentId, sort) => {
+
+		setIsEditTitle(false);
 
 		// TODO Если добавлена не вложенная заметка, возвращать курсор на предыдущую
 
-		setIsEditTitle(false);
+		let prevSibling = notesFeed.find(n => n.id === prevFocusId.current);
 
 		if (isNewParam) {
 
 			let newFeed = notesFeed.map((n) => {
 
-				if (n.sort > cursorPosition) {
+				if (n.sort > sort && n.parentId === parentId) {
 					return {
 						...n,
 						sort: n.sort - 1
@@ -266,20 +432,21 @@ const NotesList: React.FC<Props> = (props) => {
 				n.id !== noteId
 			);
 
-			setNotesFeed(newFeed);
+			let cursorShift = getFamily(prevSibling.id, notesFeed).length;
 
-			setCursorPosition(cursorPosition - 1);
+			setTimeout(function () {
+				setNotesFeed(newFeed);
+				setCursorPosition(cursorPosition - cursorShift);
+
+			},1);
 
 		}
 
 	}
 
-	const handleDelete = (noteId) => {
+	const handleDelete = (noteId, parentId, sort) => {
 
 		const currentSort = notesFeed.find(n => n.id == noteId).sort;
-
-		console.log("noteId: " + noteId)
-		console.log("currentSort: " + currentSort)
 
 		// @ts-ignore
 		let newFeed = removeFamily(noteId, notesFeed);
@@ -287,22 +454,22 @@ const NotesList: React.FC<Props> = (props) => {
 		const deletedCount = notesFeed.length - newFeed.length;
 
 		newFeed = newFeed.map(n => {
-			if (n.sort > currentSort) {
+			if (n.sort > currentSort && n.parentId === parentId) {
 				return {
 					...n,
-					sort: n.sort - deletedCount
+					sort: n.sort - 1
 				}
 			} else {
 				return n;
 			}
-		})
+		});
+
 		setTimeout(function () {
 			setNotesFeed(newFeed);
 			if (cursorPosition > newFeed.length - 1) {
 				setCursorPosition(newFeed.length - 1)
 			}
-		},1)
-
+		},1);
 
 	}
 
@@ -323,10 +490,6 @@ const NotesList: React.FC<Props> = (props) => {
 			}
 		});
 
-		console.log(isComplete)
-
-		console.log(completeIds)
-
 		let newFeed = notesFeed.map(n => {
 			if (completeIds.includes(n.id)) {
 				return {
@@ -340,9 +503,12 @@ const NotesList: React.FC<Props> = (props) => {
 
 		setTimeout(function () {
 			setNotesFeed(newFeed);
-		},1)
+		},1);
 
 	}
+
+	let position = 0;
+	let familyCount = 0;
 
 	return (
 		<div className="row">
@@ -353,33 +519,39 @@ const NotesList: React.FC<Props> = (props) => {
 
 						if (note.parentId === "root") {
 
+							if (i > 0) {
+								position += familyCount;
+							}
+
+							note.position = position;
+
+							familyCount = getFamily(note.id, notesFeed).length;
+
 							return (
 								<NotesListItem
 
 									key={note.id}
 									id={note.id}
 									sort={note.sort}
+									position={position}
+									familyCount={familyCount}
 									title={note.title}
 									complete={note.complete}
 									feed={notesFeed}
 									parentId={note.parentId}
 									cursorPosition={cursorPosition}
-									isFocus={note.sort === cursorPosition}
-									isEdit={note.sort === cursorPosition && isEditTitle}
+									isFocus={note.position === cursorPosition}
+									isEdit={note.position === cursorPosition && isEditTitle}
 									isEditTitle={isEditTitle}
 									onCancel={handleCancel}
 									onFocus={(curId) => {
 										focusId.current = curId;
 									}}
-									onEdit={() => {
-										setIsEditTitle(false)
-									}}
-									onAdd={() => {
-										setIsEditTitle(false);
-									}}
+									onEdit={handleEdit}
+									onAdd={handleAdd}
 									onDelete={handleDelete}
 									onComplete={handleComplete}
-									isNew={note.isNew ? true : false}
+									isNew={note.isNew}
 								/>
 							)
 
@@ -418,12 +590,21 @@ const NotesList: React.FC<Props> = (props) => {
 						</div>
 						<div className={styles.hints_item}>
 							<div className={styles.hints_item_key}>
-								<div className={styles.key}>ee</div>
+								<div className={styles.key}>Ctrl + →</div>
 							</div>
 							<div className={styles.hints_item_descr}>
-								Edit title
+								Indent
 							</div>
 						</div>
+						<div className={styles.hints_item}>
+							<div className={styles.hints_item_key}>
+								<div className={styles.key}>Ctrl + ←</div>
+							</div>
+							<div className={styles.hints_item_descr}>
+								Outdent
+							</div>
+						</div>
+
 						<div className={styles.hints_item}>
 							<div className={styles.hints_item_key}>
 								<div className={styles.key}>Spacebar</div>
@@ -458,19 +639,45 @@ export const removeFamily =
 			return r               // 1
 		else if (s.has(node.id) || s.has(node.parentId)) {
 			return removeFamily    // 2
-				(id
+				(id,
 					// @ts-ignore
-					, [...r, ...more]
-					, s.add(node.id)
-					, []
+					[...r, ...more],
+					s.add(node.id),
+					[]
 				)
 		} else
 			return removeFamily    // 3
-				(id
-					, more
-					, s
-					, [...r, node]
+				(id,
+					more,
+					s,
+					[...r, node]
 				)
 	}
+
+
+export const getFamily = (id: String, feed: NotesListItemProps[]) => {
+
+	let familyFeed = []
+
+	// @ts-ignore
+	let noFamilyFeed = removeFamily(id, feed);
+
+	let remainingIds = noFamilyFeed.map(n => (n.id));
+
+	let allIds = feed.map(n => (n.id));
+
+	let familyIds = [];
+
+	allIds.map((id) => {
+		if (!remainingIds.includes(id)) {
+			familyIds.push(id);
+		}
+	});
+
+	familyFeed = feed.filter(n => familyIds.includes(n.id));
+
+	return familyFeed;
+
+}
 
 export default NotesList;

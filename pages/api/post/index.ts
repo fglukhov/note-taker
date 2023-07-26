@@ -25,6 +25,7 @@ export default async function handle(req, res) {
 		where: {
 			// @ts-ignore
 			authorId: session.user.id,
+			parentId: parentId,
 			sort: {
 				gt: sort-1
 			},
