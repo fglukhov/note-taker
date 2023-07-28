@@ -24,9 +24,11 @@ const NotesList: React.FC<Props> = (props) => {
 
 	const onKeyPress = (event) => {
 
-		if (event.ctrlKey) {
+		if (event.ctrlKey || event.metaKey) {
 			event.preventDefault();
 		}
+
+		let isCtrlCommand = event.ctrlKey || event.metaKey;
 
 		eventKeyRef.current = event.code;
 
@@ -78,7 +80,7 @@ const NotesList: React.FC<Props> = (props) => {
 
 			// Indent
 
-			if (eventKeyRef.current == "ArrowRight" && event.ctrlKey) {
+			if (eventKeyRef.current == "ArrowRight" && isCtrlCommand) {
 
 				let curNote = notesFeed.find(n => n.id==focusId.current);
 
@@ -152,7 +154,7 @@ const NotesList: React.FC<Props> = (props) => {
 
 			// Unindent
 
-			if (eventKeyRef.current == "ArrowLeft" && event.ctrlKey) {
+			if (eventKeyRef.current == "ArrowLeft" && isCtrlCommand) {
 
 				let curNote = notesFeed.find(n => n.id==focusId.current);
 				let parentId = curNote.parentId;
