@@ -49,7 +49,9 @@ const Main: React.FC<Props> = (props) => {
 					{props.session && (
 						<div>
 							<h1>Notes</h1>
+
 							<NotesList feed={props.feed}/>
+
 						</div>
 					)}
         </main>
