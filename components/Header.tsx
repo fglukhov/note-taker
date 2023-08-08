@@ -156,6 +156,7 @@ const Header: React.FC = () => {
 				{/*		<a>New note</a>*/}
 				{/*	</button>*/}
 				{/*</Link>*/}
+
 				<button onClick={() => signOut()}>
 					<a>Log out</a>
 				</button>
