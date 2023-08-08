@@ -56,3 +56,7 @@
 	white-space: nowrap;
 	font-size: 12px;
 }
+
+.key + .key {
+	margin-left: 5px;
+}
