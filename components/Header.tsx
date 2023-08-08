@@ -151,11 +151,11 @@ const Header: React.FC = () => {
 				<p>
 					{session.user.name} ({session.user.email})
 				</p>
-				<Link href="/create">
-					<button>
-						<a>New note</a>
-					</button>
-				</Link>
+				{/*<Link href="/create">*/}
+				{/*	<button>*/}
+				{/*		<a>New note</a>*/}
+				{/*	</button>*/}
+				{/*</Link>*/}
 				<button onClick={() => signOut()}>
 					<a>Log out</a>
 				</button>

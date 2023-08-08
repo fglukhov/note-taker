@@ -438,7 +438,12 @@ const NotesList: React.FC<Props> = (props) => {
 				n.id !== noteId
 			);
 
-			let cursorShift = getFamily(prevSibling.id, notesFeed).length;
+			let cursorShift = 0;
+
+			if (prevSibling !== undefined) {
+				cursorShift = getFamily(prevSibling.id, notesFeed).length;
+			}
+
 
 			setTimeout(function () {
 				setNotesFeed(newFeed);
@@ -519,6 +524,13 @@ const NotesList: React.FC<Props> = (props) => {
 	return (
 		<div className="row">
 			<div className={`col ${styles.notes_list_col_1}`}>
+
+				{!notesFeed.length && (
+					<div className="new-note-hint">
+						Press&nbsp;<span>Enter</span>&nbsp;to add your first note!
+					</div>
+				)}
+
 				<div className={styles.notes_list}>
 
 					{notesFeed.map((note, i) => {
@@ -596,6 +608,14 @@ const NotesList: React.FC<Props> = (props) => {
 						</div>
 						<div className={styles.hints_item}>
 							<div className={styles.hints_item_key}>
+								<div className={styles.key}>↑</div><div className={styles.key}>↓</div>
+							</div>
+							<div className={styles.hints_item_descr}>
+								Navigate
+							</div>
+						</div>
+						<div className={styles.hints_item}>
+							<div className={styles.hints_item_key}>
 								<div className={styles.key}>Ctrl + →</div>
 							</div>
 							<div className={styles.hints_item_descr}>
@@ -610,6 +630,8 @@ const NotesList: React.FC<Props> = (props) => {
 								Outdent
 							</div>
 						</div>
+
+
 
 						<div className={styles.hints_item}>
 							<div className={styles.hints_item_key}>
