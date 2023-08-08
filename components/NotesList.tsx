@@ -24,10 +24,6 @@ const NotesList: React.FC<Props> = (props) => {
 
 	const onKeyPress = (event) => {
 
-		if (event.ctrlKey || event.metaKey) {
-			event.preventDefault();
-		}
-
 		let isCtrlCommand = event.ctrlKey || event.metaKey;
 
 		eventKeyRef.current = event.code;
@@ -47,6 +43,32 @@ const NotesList: React.FC<Props> = (props) => {
 		}, 1000);
 
 		if (!isEditTitle) {
+
+			if (eventKeyRef.current == "Space") {
+
+				event.preventDefault();
+
+				if (focusId.current !== null && !isEditTitle) {
+
+					handleComplete(focusId.current);
+
+				}
+
+			}
+
+			if (eventKeyRef.current == "Delete") {
+
+				event.preventDefault();
+
+				if (focusId.current !== null && !isEditTitle) {
+
+					console.log(focusId.current)
+
+					handleDelete(focusId.current);
+
+				}
+
+			}
 
 			if (eventKeyRef.current === "ArrowUp" || eventKeyRef.current === "ArrowDown") {
 
@@ -81,6 +103,8 @@ const NotesList: React.FC<Props> = (props) => {
 			// Indent
 
 			if (eventKeyRef.current == "ArrowRight" && isCtrlCommand) {
+
+				event.preventDefault();
 
 				let curNote = notesFeed.find(n => n.id==focusId.current);
 
@@ -156,6 +180,8 @@ const NotesList: React.FC<Props> = (props) => {
 
 			if (eventKeyRef.current == "ArrowLeft" && isCtrlCommand) {
 
+				event.preventDefault();
+
 				let curNote = notesFeed.find(n => n.id==focusId.current);
 				let parentId = curNote.parentId;
 
@@ -218,6 +244,8 @@ const NotesList: React.FC<Props> = (props) => {
 			}
 
 			if (eventKeyRef.current == "Enter") {
+
+				event.preventDefault();
 
 				prevFocusId.current = focusId.current;
 
@@ -325,6 +353,8 @@ const NotesList: React.FC<Props> = (props) => {
 		}
 
 		if (eventKeyRef.current == "Escape") {
+
+			event.preventDefault();
 
 			clearTimeout(timeout);
 			lastKeyRef.current = null;
@@ -450,14 +480,66 @@ const NotesList: React.FC<Props> = (props) => {
 
 	}
 
-	const handleDelete = (noteId, parentId, sort) => {
+	const completeNote = (id) => {
+
+		// @ts-ignore
+		let removedFeed = removeFamily(id, notesFeed);
+
+		let remainingIds = removedFeed.map(n => (n.id));
+
+		let allIds = notesFeed.map(n => (n.id));
+
+		let completeIds = [];
+
+		allIds.map((id) => {
+			if (!remainingIds.includes(id)) {
+				completeIds.push(id);
+			}
+		});
+
+		let isComplete = false;
+
+		if (notesFeed.find(n => n.id === id).complete === true) {
+			isComplete = true;
+		}
+
+		let body = { completeIds, isComplete };
+
+		fetch(`/api/complete/${id}`, {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify(body),
+		});
+
+	}
+
+	const deleteNote = (id, sort, parentId) => {
+
+		// @ts-ignore
+		let newFeed = removeFamily(id, notesFeed);
+
+		let remainingIds = newFeed.map(n => (n.id));
+
+		let body = { id, sort, remainingIds, parentId };
+
+		fetch(`/api/delete/${id}`, {
+			method: 'DELETE',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify(body),
+		});
+
+	}
+
+	const handleDelete = (noteId) => {
+
+		const parentId = notesFeed.find(n => n.id == noteId).parentId;
 
 		const currentSort = notesFeed.find(n => n.id == noteId).sort;
 
 		// @ts-ignore
 		let newFeed = removeFamily(noteId, notesFeed);
 
-		const deletedCount = notesFeed.length - newFeed.length;
+		// const deletedCount = notesFeed.length - newFeed.length;
 
 		newFeed = newFeed.map(n => {
 			if (n.sort > currentSort && n.parentId === parentId) {
@@ -477,9 +559,15 @@ const NotesList: React.FC<Props> = (props) => {
 			}
 		},1);
 
+		deleteNote(focusId.current, currentSort, parentId);
+
 	}
 
-	const handleComplete = (noteId, isComplete) => {
+	const handleComplete = (noteId) => {
+
+		let curNote = notesFeed.find(n => (n.id === noteId));
+
+		let isComplete = curNote.complete;
 
 		// @ts-ignore
 		let removedFeed = removeFamily(noteId, notesFeed);
@@ -510,6 +598,8 @@ const NotesList: React.FC<Props> = (props) => {
 		setTimeout(function () {
 			setNotesFeed(newFeed);
 		},1);
+
+		completeNote(focusId.current);
 
 	}
 

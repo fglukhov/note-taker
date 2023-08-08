@@ -19,24 +19,24 @@ const Header: React.FC = () => {
 				</a>
 			</Link>
 			<style jsx>{`
-        .bold {
-          font-weight: bold;
-        }
+				.bold {
+					font-weight: bold;
+				}
 
-        a {
-          text-decoration: none;
-          color: var(--geist-foreground);
-          display: inline-block;
-        }
+				a {
+					text-decoration: none;
+					color: var(--geist-foreground);
+					display: inline-block;
+				}
 
-        .left a[data-active='true'] {
-          color: gray;
-        }
+				.left a[data-active='true'] {
+					color: gray;
+				}
 
-        a + a {
-          margin-left: 1rem;
-        }
-      `}</style>
+				a + a {
+					margin-left: 1rem;
+				}
+			`}</style>
 		</div>
 	);
 
@@ -51,34 +51,34 @@ const Header: React.FC = () => {
 					</a>
 				</Link>
 				<style jsx>{`
-          .bold {
-            font-weight: bold;
-          }
+					.bold {
+						font-weight: bold;
+					}
 
-          a {
-            text-decoration: none;
-            color: var(--geist-foreground);
-            display: inline-block;
-          }
+					a {
+						text-decoration: none;
+						color: var(--geist-foreground);
+						display: inline-block;
+					}
 
-          .left a[data-active='true'] {
-            color: gray;
-          }
+					.left a[data-active='true'] {
+						color: gray;
+					}
 
-          a + a {
-            margin-left: 1rem;
-          }
-        `}</style>
+					a + a {
+						margin-left: 1rem;
+					}
+				`}</style>
 			</div>
 		);
 		right = (
 			<div className="right">
 				<p>Validating session ...</p>
 				<style jsx>{`
-          .right {
-            margin-left: auto;
-          }
-        `}</style>
+					.right {
+						margin-left: auto;
+					}
+				`}</style>
 			</div>
 		);
 	}
@@ -90,26 +90,26 @@ const Header: React.FC = () => {
 					<a data-active={isActive('/signup')}>Log in</a>
 				</Link>
 				<style jsx>{`
-          a {
-            text-decoration: none;
-            color: var(--geist-foreground);
-            display: inline-block;
-          }
+					a {
+						text-decoration: none;
+						color: var(--geist-foreground);
+						display: inline-block;
+					}
 
-          a + a {
-            margin-left: 1rem;
-          }
+					a + a {
+						margin-left: 1rem;
+					}
 
-          .right {
-            margin-left: auto;
-          }
+					.right {
+						margin-left: auto;
+					}
 
-          .right a {
-            border: 1px solid var(--geist-foreground);
-            padding: 0.5rem 1rem;
-            border-radius: 3px;
-          }
-        `}</style>
+					.right a {
+						border: 1px solid var(--geist-foreground);
+						padding: 0.5rem 1rem;
+						border-radius: 3px;
+					}
+				`}</style>
 			</div>
 		);
 	}
@@ -126,24 +126,24 @@ const Header: React.FC = () => {
 					<a data-active={isActive('/')}>Notes</a>
 				</Link>
 				<style jsx>{`
-          .bold {
-            font-weight: bold;
-          }
+					.bold {
+						font-weight: bold;
+					}
 
-          a {
-            text-decoration: none;
-            color: var(--geist-foreground);
-            display: inline-block;
-          }
+					a {
+						text-decoration: none;
+						color: var(--geist-foreground);
+						display: inline-block;
+					}
 
-          .left a[data-active='true'] {
-            color: gray;
-          }
+					.left a[data-active='true'] {
+						color: gray;
+					}
 
-          a + a {
-            margin-left: 1rem;
-          }
-        `}</style>
+					a + a {
+						margin-left: 1rem;
+					}
+				`}</style>
 			</div>
 		);
 		right = (
@@ -151,45 +151,46 @@ const Header: React.FC = () => {
 				<p>
 					{session.user.name} ({session.user.email})
 				</p>
-				<Link href="/create">
-					<button>
-						<a>New note</a>
-					</button>
-				</Link>
+				{/*<Link href="/create">*/}
+				{/*	<button>*/}
+				{/*		<a>New note</a>*/}
+				{/*	</button>*/}
+				{/*</Link>*/}
 				<button onClick={() => signOut()}>
 					<a>Log out</a>
 				</button>
 				<style jsx>{`
-          a {
-            text-decoration: none;
-            color: var(--geist-foreground);
-            display: inline-block;
-          }
 
-          p {
-            display: inline-block;
-            font-size: 13px;
-            padding-right: 1rem;
-          }
+					a {
+						text-decoration: none;
+						color: var(--geist-foreground);
+						display: inline-block;
+					}
 
-          a + a {
-            margin-left: 1rem;
-          }
+					p {
+						display: inline-block;
+						font-size: 13px;
+						padding-right: 1rem;
+					}
 
-          .right {
-            margin-left: auto;
-          }
+					a + a {
+						margin-left: 1rem;
+					}
 
-          .right a {
-            border: 1px solid var(--geist-foreground);
-            padding: 0.5rem 1rem;
-            border-radius: 3px;
-          }
+					.right {
+						margin-left: auto;
+					}
 
-          button {
-            border: none;
-          }
-        `}</style>
+					.right a {
+						border: 1px solid var(--geist-foreground);
+						padding: 0.5rem 1rem;
+						border-radius: 3px;
+					}
+
+					button {
+						border: none;
+					}
+				`}</style>
 			</div>
 		);
 	}
@@ -199,12 +200,12 @@ const Header: React.FC = () => {
 			{left}
 			{right}
 			<style jsx>{`
-        nav {
-          display: flex;
-          padding: 2rem;
-          align-items: center;
-        }
-      `}</style>
+				nav {
+					display: flex;
+					padding: 2rem;
+					align-items: center;
+				}
+			`}</style>
 		</nav>
 	);
 };

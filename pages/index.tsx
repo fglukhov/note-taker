@@ -46,10 +46,14 @@ const Main: React.FC<Props> = (props) => {
     <Layout>
       <div className="page">
         <main>
-					{props.session && (
+					{props.session ? (
 						<div>
 							<h1>Notes</h1>
 							<NotesList feed={props.feed}/>
+						</div>
+					) : (
+						<div className="new-note-hint">
+							Press&nbsp;<span>Enter</span>&nbsp;to add your first note!
 						</div>
 					)}
         </main>

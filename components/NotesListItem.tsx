@@ -22,7 +22,7 @@ export type NotesListItemProps = {
 	onEdit?: (noteId, title) => any;
 	onAdd?: (noteId, title) => any;
 	onComplete?: (noteId, isComplete) => any;
-	onDelete?: (noteId, parentId, sort) => any;
+	onDelete?: (noteId) => any;
 	parentId?: string;
 	complete?: boolean;
 }
@@ -44,56 +44,8 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
 
 	//const [ignored, forceUpdate] = useReducer(x => x + 1, 0);
 
-	const deleteNote = async () => {
 
-		// @ts-ignore
-		let newFeed = removeFamily(id, props.feed);
 
-		let remainingIds = newFeed.map(n => (n.id));
-
-		let deletedCount = props.feed.length - newFeed.length;
-
-		let body = { id, title, sort, remainingIds, parentId };
-
-		await fetch(`/api/delete/${id}`, {
-			method: 'DELETE',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify(body),
-		});
-
-	}
-	const completeNote = async () => {
-
-		// @ts-ignore
-		let removedFeed = removeFamily(id, props.feed);
-
-		let remainingIds = removedFeed.map(n => (n.id));
-
-		let allIds = props.feed.map(n => (n.id));
-
-		let completeIds = [];
-
-		allIds.map((id) => {
-			if (!remainingIds.includes(id)) {
-				completeIds.push(id);
-			}
-		});
-
-		let isComplete = false;
-
-		if (props.feed.find(n => n.id === id).complete === true) {
-			isComplete = true;
-		}
-
-		let body = { completeIds, isComplete };
-
-		await fetch(`/api/complete/${id}`, {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify(body),
-		});
-
-	}
 
 	const onKeyPress = (event) => {
 
@@ -101,7 +53,13 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
 
 		if (eventKeyRef.current == "Escape") {
 
+			console.log("esc")
+
+			event.preventDefault();
+
 			if (props.isFocus) {
+
+				console.log(props.isFocus)
 
 				if (props.isEdit) {
 
@@ -119,30 +77,9 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
 
 		}
 
-		if (eventKeyRef.current == "Delete") {
 
 
-			if (!props.isEdit && props.isFocus) {
 
-				deleteNote().then(() => {
-					props.onDelete(id, parentId, sort);
-				});
-
-			}
-
-		}
-
-		if (eventKeyRef.current == "Space") {
-
-			if (!props.isEdit && props.isFocus) {
-
-				completeNote().then(() => {
-					props.onComplete(id, props.complete);
-				});
-
-			}
-
-		}
 
 	}
 
@@ -156,14 +93,16 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
 
 			try {
 				const body = { title };
+
+				setTitle(title);
+				setPrevTitle(title);
+
 				await fetch(`/api/edit/${id}`, {
 					method: 'POST',
 					headers: { 'Content-Type': 'application/json' },
 					body: JSON.stringify(body),
 				});
 
-				setTitle(title);
-				setPrevTitle(title);
 
 			} catch (error) {
 				console.error(error);
@@ -176,13 +115,15 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
 			try {
 				const body = { id, title, sort, parentId };
 
+				setIsNew(false);
+
+
 				await fetch('/api/post', {
 					method: 'POST',
 					headers: { 'Content-Type': 'application/json' },
 					body: JSON.stringify(body),
 				});
 
-				setIsNew(false);
 
 			} catch (error) {
 				console.error(error);
@@ -217,14 +158,15 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
 					<div className={styles.notes_list_item_form}>
 
 						<form onSubmit={(e) => {
-							editTitle(e).then(() => {
-								if (!isNew) {
-									props.onEdit(id, title);
-								} else {
-									setIsNew(false);
-									setPrevTitle(title);
-									props.onAdd(id, title);
-								}
+							if (!isNew) {
+								props.onEdit(id, title);
+							} else {
+								setIsNew(false);
+								setPrevTitle(title);
+								props.onAdd(id, title);
+							}
+							editTitle(e).catch((error) => {
+								alert(error);
 							});
 						}}>
 							<input
