@@ -20,7 +20,7 @@ export type NotesListItemProps = {
 	onFocus?: (id) => any;
 	onCancel?: (isNewParam, noteId, parentId, sort) => any;
 	onEdit?: (noteId, title) => any;
-	onAdd?: (noteId, title) => any;
+	onAdd?: (noteId, parentId, title, sort) => any;
 	onComplete?: (noteId, isComplete) => any;
 	onDelete?: (noteId, parentId, sort) => any;
 	parentId?: string;
@@ -35,7 +35,7 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
 	const sort = props.sort;
 	const [prevTitle, setPrevTitle] = useState(props.title);
 	const [isNew, setIsNew] = useState(props.isNew);
-	//const [complete, setComplete] = useState(props.complete);
+	const [complete, setComplete] = useState(props.complete);
 
 
 
@@ -62,40 +62,10 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
 		});
 
 	}
-	const completeNote = async () => {
-
-		// @ts-ignore
-		let removedFeed = removeFamily(id, props.feed);
-
-		let remainingIds = removedFeed.map(n => (n.id));
-
-		let allIds = props.feed.map(n => (n.id));
-
-		let completeIds = [];
-
-		allIds.map((id) => {
-			if (!remainingIds.includes(id)) {
-				completeIds.push(id);
-			}
-		});
-
-		let isComplete = false;
-
-		if (props.feed.find(n => n.id === id).complete === true) {
-			isComplete = true;
-		}
-
-		let body = { completeIds, isComplete };
-
-		await fetch(`/api/complete/${id}`, {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify(body),
-		});
-
-	}
 
 	const onKeyPress = (event) => {
+
+		console.log("keypress")
 
 		eventKeyRef.current = event.code;
 
@@ -119,30 +89,33 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
 
 		}
 
-		if (eventKeyRef.current == "Delete") {
+		// if (eventKeyRef.current == "Delete") {
+		//
+		// 	console.log("Delete")
+		//
+		// 	if (!props.isEdit && props.isFocus) {
+		//
+		// 		deleteNote().then(() => {
+		// 			props.onDelete(id, parentId, sort);
+		// 		});
+		//
+		// 	}
+		//
+		// }
 
+		//console.log(eventKeyRef.current)
 
-			if (!props.isEdit && props.isFocus) {
-
-				deleteNote().then(() => {
-					props.onDelete(id, parentId, sort);
-				});
-
-			}
-
-		}
-
-		if (eventKeyRef.current == "Space") {
-
-			if (!props.isEdit && props.isFocus) {
-
-				completeNote().then(() => {
-					props.onComplete(id, props.complete);
-				});
-
-			}
-
-		}
+		// if (eventKeyRef.current == "Space") {
+		//
+		// 	if (!props.isEdit && props.isFocus) {
+		//
+		// 		completeNote().then(() => {
+		// 			props.onComplete(id, props.complete);
+		// 		});
+		//
+		// 	}
+		//
+		// }
 
 	}
 
@@ -173,26 +146,21 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
 
 			// Adding new note
 
-			try {
-				const body = { id, title, sort, parentId };
+			console.log('add new note')
 
-				await fetch('/api/post', {
-					method: 'POST',
-					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify(body),
-				});
-
-				setIsNew(false);
-
-			} catch (error) {
-				console.error(error);
-			}
+			setIsNew(false);
 
 		}
 
 	};
 
-	useKeyPress([], onKeyPress);
+	if (props.isFocus) {
+		useKeyPress(["Escape", "Delete", " "], onKeyPress);
+	} else {
+		useKeyPress([""], onKeyPress);
+	}
+
+
 
 	if (props.isFocus) {
 		props.onFocus(props.id);
@@ -203,28 +171,27 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
 
 	return (
 
-		<div className={styles.notes_list_item + (props.isFocus ? " "+styles.focus : "") + (props.complete ? " "+styles.complete : "")} id={props.id}>
-
+		<div
+			className={styles.notes_list_item + (props.isFocus ? " " + styles.focus : "") + (props.complete ? " " + styles.complete : "")}
+			id={props.id}>
 			{!(props.isEdit && props.isFocus) ? (
 				<div className={styles.notes_list_item_title_wrapper}>
 					<div className="notes-item-title">
-						{ title }
+						{/*props.position + "-" + props.sort + " " + */title}
 					</div>
 				</div>
 			) : (
 				<div className={styles.notes_list_item_title_wrapper}>
-
 					<div className={styles.notes_list_item_form}>
-
 						<form onSubmit={(e) => {
+							if (!isNew) {
+								props.onEdit(id, title);
+							} else {
+								setIsNew(false);
+								setPrevTitle(title);
+								props.onAdd(id, props.parentId, title, props.sort);
+							}
 							editTitle(e).then(() => {
-								if (!isNew) {
-									props.onEdit(id, title);
-								} else {
-									setIsNew(false);
-									setPrevTitle(title);
-									props.onAdd(id, title);
-								}
 							});
 						}}>
 							<input
@@ -265,11 +232,10 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
 							isEdit={(position === props.cursorPosition && props.isEditTitle)}
 							isEditTitle={props.isEditTitle}
 							onFocus={props.onFocus}
-							onComplete={props.onComplete}
 							onCancel={props.onCancel}
 							onEdit={props.onEdit}
 							onAdd={props.onAdd}
-							onDelete={props.onDelete}
+							//onDelete={props.onDelete}
 							isNew={childNote.isNew}
 						/>
 					)
@@ -284,7 +250,6 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
 
 
 }
-
 
 
 export default NotesListItem;
