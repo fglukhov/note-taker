@@ -595,7 +595,7 @@ const NotesList: React.FC<Props> = (props) => {
 	// TODO feed and updatedIds are parameters
 	const reorderNotes = async (prevFeed, feed, ids) => {
 
-		console.log('reorder')
+		//console.log('reorder')
 
 		const body = { prevFeed, feed, ids };
 
@@ -735,7 +735,7 @@ const NotesList: React.FC<Props> = (props) => {
 	return (
 		<div className="row">
 			<div className={`col ${styles.notes_list_col_1}`}>
-				<div>{isUpdating ? "true" : "false"}</div>
+				{/*<div>{isUpdating ? "true" : "false"}</div>*/}
 
 				{!notesFeed.length && (
 					<div className="new-note-hint">
