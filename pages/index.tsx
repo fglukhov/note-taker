@@ -5,6 +5,7 @@ import NotesList, {getFamily} from "../components/NotesList"
 import { NotesListItemProps } from "../components/NotesListItem"
 import prisma from '../lib/prisma';
 import {getSession} from "next-auth/react";
+import {NotesProvider} from "../components/NotesContext";
 
 // index.tsx test
 export const getServerSideProps: GetServerSideProps = async (context) => {
@@ -50,7 +51,10 @@ const Main: React.FC<Props> = (props) => {
 						<div>
 							<h1>Notes</h1>
 
+
 							<NotesList feed={props.feed}/>
+
+
 
 						</div>
 					)}
