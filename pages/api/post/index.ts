@@ -10,8 +10,6 @@ export default async function handle(req, res) {
 
 	const { noteId, title, sort, parentId } = req.body;
 
-	console.log(noteId)
-
 	const session = await getSession({ req });
 
 	const result = await prisma.note.create({

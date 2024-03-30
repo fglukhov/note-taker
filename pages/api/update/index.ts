@@ -17,22 +17,30 @@ export default async function handle(req, res) {
 
 	const { prevFeed, feed, ids } = req.body;
 
-	console.log(ids)
-
 	const session = await getSession({ req });
 
-	const updateRow = async (id, sort, parentId, complete) => {
+	const updateRow = async (id, sort, parentId, complete, title) => {
 
-		await prisma.note.update({
+		await prisma.note.upsert({
 			where: {
 				id: id,
 			},
 
-			data: {
+			update: {
 				sort: sort,
 				parentId: parentId,
-				complete: complete
+				complete: complete,
+				title: title,
+			},
+
+			create: {
+				id: id,
+				sort: sort,
+				parentId: parentId,
+				title: title,
+				author: { connect: { email: session?.user?.email } },
 			}
+
 		})
 
 	}
@@ -49,13 +57,13 @@ export default async function handle(req, res) {
 
 
 	const results = await Promise.all(
+
 		ids.map(id => {
 			let curNote = feed.find(n => n.id === id);
-			console.log(curNote)
 			if (curNote == undefined) {
 				deleteRow(id)
 			} else {
-				updateRow(id, curNote.sort, curNote.parentId, curNote.complete)
+				updateRow(id, curNote.sort, curNote.parentId, curNote.complete, curNote.title)
 			}
 		})
 	)

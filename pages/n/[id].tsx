@@ -64,6 +64,14 @@ const NoteExpanded: React.FC<NoteProps> = (props) => {
 
 	const [isEdit, setIsEdit] = useState(false);
 
+	const [modalIsOpen, setIsOpen] = React.useState(true);
+
+	function closeModal() {
+
+		router.push('/');
+		//setIsOpen(false);
+	}
+
 	const editData = async (e: React.SyntheticEvent) => {
 		e.preventDefault();
 		try {
@@ -89,10 +97,12 @@ const NoteExpanded: React.FC<NoteProps> = (props) => {
 	return (
 		<Layout>
 			<Modal
-				isOpen={true} // The modal should always be shown on page load, it is the 'page'
-				onRequestClose={() => router.push('/')}
+				isOpen={modalIsOpen} // The modal should always be shown on page load, it is the 'page'
+				onRequestClose={closeModal}
 				contentLabel={title}
 			>
+
+				<button onClick={closeModal}>close</button>
 
 				{isEdit ? (
 					<form onSubmit={editData}>
@@ -110,13 +120,13 @@ const NoteExpanded: React.FC<NoteProps> = (props) => {
 							rows={8}
 							value={content}
 						/>
-						<input disabled={!title} type="submit" value="Save" />
+						<input disabled={!title} type="submit" value="Save"/>
 					</form>
 				) : (
 					<>
 						<h2>{title}</h2>
 						<p>By {props?.author?.name || 'Unknown author'}</p>
-						<ReactMarkdown children={content} />
+						<ReactMarkdown children={content}/>
 					</>
 				)}
 
@@ -138,8 +148,8 @@ const NoteExpanded: React.FC<NoteProps> = (props) => {
 				}
 			</Modal>
 			<style jsx>{`
-        .page {
-          background: var(--geist-background);
+				.page {
+					background: var(--geist-background);
           padding: 2rem;
         }
 
