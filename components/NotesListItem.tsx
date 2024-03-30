@@ -1,7 +1,8 @@
 import React, {ReactNode, useState, useRef} from "react";
 import {useKeyPress} from '../lib/useKeyPress';
-import {getFamily, removeFamily} from "./NotesList";
+import {getFamily} from "./NotesList";
 import styles from './NotesListItem.module.scss'
+import {useNotes} from "./NotesContext";
 
 export type NotesListItemProps = {
 	id: string;
@@ -20,7 +21,7 @@ export type NotesListItemProps = {
 	onFocus?: (id) => any;
 	onCancel?: (isNewParam, noteId, parentId, sort) => any;
 	onEdit?: (noteId, title) => any;
-	onAdd?: (noteId, parentId, title, sort) => any;
+	onAdd?: (noteId, title) => any;
 	onComplete?: (noteId, isComplete) => any;
 	onDelete?: (noteId, parentId, sort) => any;
 	parentId?: string;
@@ -35,37 +36,12 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
 	const sort = props.sort;
 	const [prevTitle, setPrevTitle] = useState(props.title);
 	const [isNew, setIsNew] = useState(props.isNew);
-	const [complete, setComplete] = useState(props.complete);
-
-
 
 	const eventKeyRef = useRef(null);
-	const lastKeyRef = useRef(null);
 
-	//const [ignored, forceUpdate] = useReducer(x => x + 1, 0);
-
-	const deleteNote = async () => {
-
-		// @ts-ignore
-		let newFeed = removeFamily(id, props.feed);
-
-		let remainingIds = newFeed.map(n => (n.id));
-
-		let deletedCount = props.feed.length - newFeed.length;
-
-		let body = { id, title, sort, remainingIds, parentId };
-
-		await fetch(`/api/delete/${id}`, {
-			method: 'DELETE',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify(body),
-		});
-
-	}
+	const notesFeed = useNotes();
 
 	const onKeyPress = (event) => {
-
-		console.log("keypress")
 
 		eventKeyRef.current = event.code;
 
@@ -89,64 +65,22 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
 
 		}
 
-		// if (eventKeyRef.current == "Delete") {
-		//
-		// 	console.log("Delete")
-		//
-		// 	if (!props.isEdit && props.isFocus) {
-		//
-		// 		deleteNote().then(() => {
-		// 			props.onDelete(id, parentId, sort);
-		// 		});
-		//
-		// 	}
-		//
-		// }
-
-		//console.log(eventKeyRef.current)
-
-		// if (eventKeyRef.current == "Space") {
-		//
-		// 	if (!props.isEdit && props.isFocus) {
-		//
-		// 		completeNote().then(() => {
-		// 			props.onComplete(id, props.complete);
-		// 		});
-		//
-		// 	}
-		//
-		// }
-
 	}
 
 	const editTitle = async (e: React.SyntheticEvent) => {
 
 		e.preventDefault();
 
-		if (!isNew) {
+		if (!props.isNew) {
 
 			// editing note
 
-			try {
-				const body = { title };
-				await fetch(`/api/edit/${id}`, {
-					method: 'POST',
-					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify(body),
-				});
-
-				setTitle(title);
-				setPrevTitle(title);
-
-			} catch (error) {
-				console.error(error);
-			}
+			setTitle(title);
+			setPrevTitle(title);
 
 		} else {
 
 			// Adding new note
-
-			console.log('add new note')
 
 			setIsNew(false);
 
@@ -184,15 +118,22 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
 				<div className={styles.notes_list_item_title_wrapper}>
 					<div className={styles.notes_list_item_form}>
 						<form onSubmit={(e) => {
-							if (!isNew) {
-								props.onEdit(id, title);
+							if (title) {
+								if (!isNew) {
+									props.onEdit(id, title);
+								} else {
+									setIsNew(false);
+									setPrevTitle(title);
+									props.onAdd(id, title);
+								}
+								editTitle(e).then(() => {
+								});
 							} else {
-								setIsNew(false);
-								setPrevTitle(title);
-								props.onAdd(id, props.parentId, title, props.sort);
+
+								// TODO консоль выдает 'Form submission canceled because the form is not connected'
+
+								props.onDelete(id, parentId, sort)
 							}
-							editTitle(e).then(() => {
-							});
 						}}>
 							<input
 								autoFocus
@@ -206,7 +147,7 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
 				</div>
 			)}
 
-			{props.feed.map((childNote, i) => {
+			{notesFeed.map((childNote, i) => {
 
 				if (childNote.parentId == props.id) {
 
@@ -214,7 +155,7 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
 						position += familyCount;
 					}
 
-					familyCount = getFamily(childNote.id, props.feed).length;
+					familyCount = getFamily(childNote.id, notesFeed).length;
 
 					return (
 						<NotesListItem
@@ -225,7 +166,6 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
 							familyCount={familyCount}
 							title={childNote.title}
 							complete={childNote.complete}
-							feed={props.feed}
 							parentId={childNote.parentId}
 							cursorPosition={props.cursorPosition}
 							isFocus={position === props.cursorPosition}
@@ -235,7 +175,7 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
 							onCancel={props.onCancel}
 							onEdit={props.onEdit}
 							onAdd={props.onAdd}
-							//onDelete={props.onDelete}
+							onDelete={props.onDelete}
 							isNew={childNote.isNew}
 						/>
 					)
@@ -248,8 +188,6 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
 
 	)
 
-
 }
-
 
 export default NotesListItem;
