@@ -108,14 +108,18 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
 		<div
 			className={styles.notes_list_item + (props.isFocus ? " " + styles.focus : "") + (props.complete ? " " + styles.complete : "")}
 			id={props.id}>
+
 			{!(props.isEdit && props.isFocus) ? (
 				<div className={styles.notes_list_item_title_wrapper}>
+					{/*<div style={{color: "red", fontSize: "12px",}}>{props.sort}</div>*/}
 					<div className="notes-item-title">
-						{/*props.position + "-" + props.sort + " " + */title}
+						{/*<span style={{color: "red", fontSize: "12px",}}>{props.sort+": "}</span>*/}
+						{title}
 					</div>
 				</div>
 			) : (
 				<div className={styles.notes_list_item_title_wrapper}>
+					{/*<div style={{color: "red", fontSize: "12px", paddingBottom: "3px"}}>{props.sort}</div>*/}
 					<div className={styles.notes_list_item_form}>
 						<form onSubmit={(e) => {
 							if (title) {
