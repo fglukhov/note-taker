@@ -7,6 +7,7 @@ import {NotesListItemProps} from "./NotesListItem";
 import {useKeyPress} from '../lib/useKeyPress';
 import styles from './NotesList.module.scss'
 import Router from "next/router";
+import {set} from "immutable";
 
 type Props = {
 	feed: NotesListItemProps[]
@@ -43,7 +44,9 @@ const NotesList: React.FC<Props> = (props) => {
 
 	function reorderCallback() {
 
-		if (isChanged && !isUpdating) {
+		// TODO нехорошо, что заметки не синхронизируются при открытой форме, но в противном случае сбивается сортировка
+
+		if (isChanged && !isUpdating && !isEditTitle) {
 
 			console.log('refresh')
 
@@ -485,127 +488,7 @@ const NotesList: React.FC<Props> = (props) => {
 
 			if (eventKeyRef.current == "Enter" && !isEditTitle) {
 
-				// TODO вынести в функцию, которую вызывать и после сабмита, чтобы сразу добавлялась новая заметка
-
-				prevFocusId.current = focusId.current;
-				prevCursorPosition.current = cursorPosition;
-
-				clearTimeout(timeout);
-				lastKeyRef.current = null;
-
-				let newId = crypto.randomUUID();
-
-				let curNote = notesFeed.find(n => n.id==focusId.current);
-
-				if (curNote !== undefined) {
-
-					prevTitle.current = curNote.title;
-				}
-
-
-
-				let parentId;
-
-				let insertChild = false;
-
-				let newSort = 0;
-
-				if (!notesFeed.length) {
-
-					parentId = "root";
-
-				} else {
-
-					if (event.shiftKey === true) {
-
-						insertChild = true;
-
-						parentId = curNote.id;
-
-					} else {
-
-						parentId = curNote.parentId;
-
-						if (event.altKey) {
-							newSort = curNote.sort;
-						} else {
-							newSort = curNote.sort + 1;
-						}
-
-
-					}
-
-				}
-
-				let insertAt;
-
-				if (!notesFeed.length) {
-
-					insertAt = 0;
-
-				} else {
-
-					if (insertChild) {
-
-						// Вложенный элемент всегда вставляется на следующую позицию за текущей
-
-						insertAt = cursorPosition + 1;
-
-					} else {
-
-						if (!insertChild && event.altKey) {
-
-							insertAt = cursorPosition
-
-						} else {
-
-							insertAt = cursorPosition + getFamily(curNote.id, notesFeed).length
-
-						}
-
-
-					}
-
-				}
-
-				let newNote:NotesListItemProps = {
-					id: newId,
-					title: "",
-					sort: newSort,
-					//position: insertAt,
-					isNew: true,
-					parentId: parentId
-				}
-
-				let newFeed = [
-					...notesFeed,
-					newNote,
-				];
-
-				newFeed = newFeed.map((n) => {
-
-					if (n.sort >= newSort && n.id != newId && n.parentId == parentId) {
-						return {
-							...n,
-							sort: n.sort + 1
-						}
-					} else {
-						return n;
-					}
-
-				});
-
-				newFeed.sort((a,b) => a.sort - b.sort);
-
-				// TODO подумать, как убрать этот таймаут. Он нужен для того, чтобы форма новой заметки сразу не отправлялась.
-
-				setTimeout(function () {
-
-					setCursorPosition(insertAt);
-					setIsEditTitle(true);
-					setNotesFeed(newFeed);
-
-				}, 1);
+				insertNote(event);
 
 			}
 
@@ -629,7 +512,145 @@ const NotesList: React.FC<Props> = (props) => {
 
 	useKeyPress([], onKeyPress);
 
-	
+
+	const insertNote = (event) => {
+
+		if (event == null) {
+
+			console.log('event null')
+
+			event = {
+				shiftKey: false,
+				altKey: false
+			}
+
+		}
+
+		// TODO вынести в функцию, которую вызывать и после сабмита, чтобы сразу добавлялась новая заметка
+
+		prevFocusId.current = focusId.current;
+		prevCursorPosition.current = cursorPosition;
+
+		clearTimeout(timeout);
+		lastKeyRef.current = null;
+
+		let newId = crypto.randomUUID();
+
+		let curNote = notesFeed.find(n => n.id==focusId.current);
+
+		if (curNote !== undefined) {
+
+			prevTitle.current = curNote.title;
+		}
+
+
+
+		let parentId;
+
+		let insertChild = false;
+
+		let newSort = 0;
+
+		if (!notesFeed.length) {
+
+			parentId = "root";
+
+		} else {
+
+			if (event.shiftKey === true) {
+
+				insertChild = true;
+
+				parentId = curNote.id;
+
+			} else {
+
+				parentId = curNote.parentId;
+
+				if (event.altKey) {
+					newSort = curNote.sort;
+				} else {
+					newSort = curNote.sort + 1;
+				}
+
+
+			}
+
+		}
+
+		let insertAt;
+
+		if (!notesFeed.length) {
+
+			insertAt = 0;
+
+		} else {
+
+			if (insertChild) {
+
+				// Вложенный элемент всегда вставляется на следующую позицию за текущей
+
+				insertAt = cursorPosition + 1;
+
+			} else {
+
+				if (!insertChild && event.altKey) {
+
+					insertAt = cursorPosition
+
+				} else {
+
+					insertAt = cursorPosition + getFamily(curNote.id, notesFeed).length
+
+				}
+
+			}
+
+		}
+
+		let newNote:NotesListItemProps = {
+			id: newId,
+			title: "",
+			sort: newSort,
+			//position: insertAt,
+			isNew: true,
+			parentId: parentId
+		}
+
+		let newFeed = [
+			...notesFeed,
+			newNote,
+		];
+
+		newFeed = newFeed.map((n) => {
+
+			if (n.sort >= newSort && n.id != newId && n.parentId == parentId) {
+				return {
+					...n,
+					sort: n.sort + 1
+				}
+			} else {
+				return n;
+			}
+
+		});
+
+		newFeed.sort((a,b) => a.sort - b.sort);
+
+		// TODO подумать, как убрать этот таймаут. Он нужен для того, чтобы форма новой заметки сразу не отправлялась.
+
+		setTimeout(function () {
+
+			setCursorPosition(insertAt);
+			setIsEditTitle(true);
+			setNotesFeed(newFeed);
+			//console.log('insert note')
+
+		}, 1);
+
+
+
+	}
 
 
 	// TODO feed and updatedIds are parameters
@@ -658,22 +679,24 @@ const NotesList: React.FC<Props> = (props) => {
 			clearTimeout(updateTimeout);
 		}
 
+		let curNote = notesFeed.find(n => n.id==noteId);
+
+		console.log(title)
+
 		let newFeed = notesFeed.map((n) => {
 			if (n.id === noteId) {
 				return {
 					...n,
-					title: title
+					title: title,
+					isNew: false
 				}
 			} else {
 				return n;
 			}
 		});
 
-		let curNote = newFeed.find(n => n.id==focusId.current);
 
 		setIsEditTitle(false);
-
-		// TODO при добавлении добавлять id следущих заметок для изменения их сортировки в базе
 
 		updatedIds.current.push(noteId);
 
@@ -681,15 +704,56 @@ const NotesList: React.FC<Props> = (props) => {
 
 			newFeed.map(n => {
 
-				if (n.parentId == curNote.parentId && n.sort >= curNote.sort && n.id != curNote.id) {
+				if (n.parentId == curNote.parentId && n.sort >= curNote.sort && n.id != noteId) {
 
 					updatedIds.current.push(n.id);
 
 				}
 
-			})
+			});
+
+			console.log('add new form')
+
+			const newId = crypto.randomUUID();
+
+			newFeed = [
+				...newFeed,
+				{
+					id: newId,
+					title: "",
+					sort: curNote.sort + 1,
+					//position: insertAt,
+					isNew: true,
+					parentId: curNote.parentId
+				}
+			];
+
+			console.log(curNote.sort)
+
+			newFeed = newFeed.map((n) => {
+
+				if (n.sort > curNote.sort  && n.parentId == curNote.parentId && n.id != newId) {
+					return {
+						...n,
+						sort: n.sort + 1
+					}
+				} else {
+					return n;
+				}
+
+			});
+
+			newFeed.sort((a,b) => a.sort - b.sort);
+
+			setIsEditTitle(true)
+
+			prevCursorPosition.current = cursorPosition;
+
+			setCursorPosition(cursorPosition + 1)
 
 		}
+
+
 
 
 		updateTimeout = setTimeout(function () {
@@ -705,6 +769,8 @@ const NotesList: React.FC<Props> = (props) => {
 		prevFeed.current = newFeed;
 
 		setNotesFeed(newFeed);
+
+
 
 	}
 
@@ -731,10 +797,14 @@ const NotesList: React.FC<Props> = (props) => {
 				n.id !== noteId
 			);
 
-			setTimeout(function () {
+			// updatedIds.current = updatedIds.current.filter(id => {id != noteId});
+			//
+			// console.log(updatedIds.current)
+
+			//setTimeout(function () {
 				setNotesFeed(newFeed);
 				setCursorPosition(prevCursorPosition.current);
-			},1);
+			//},1);
 
 		}
 
@@ -767,12 +837,14 @@ const NotesList: React.FC<Props> = (props) => {
 			}
 		});
 
+		removedIds.map(id => {
+			if (!updatedIds.current.includes(id)) updatedIds.current.push(id)
+		})
+
 		//const deletedCount = notesFeed.length - newFeed.length;
 
-		// TODO уменьшать sort следующих за удаленной заметок
-
 		notesFeed.map(n => {
-			if (!updatedIds.current.includes(n.id)) updatedIds.current.push(n.id)
+			if (n.parentId === curNote.parentId && n.sort > curNote.sort) updatedIds.current.push(n.id)
 		})
 
 		let newFeed = notesFeed.filter(n => {
@@ -794,6 +866,8 @@ const NotesList: React.FC<Props> = (props) => {
 
 		});
 
+		console.log(newFeed)
+
 		updateTimeout = setTimeout(function () {
 
 			setIsChanged(true);
@@ -802,15 +876,17 @@ const NotesList: React.FC<Props> = (props) => {
 
 			updatedIds.current = [];
 
-			if (cursorPosition > newFeed.length - 1) {
-				setCursorPosition(newFeed.length - 1)
-			}
 
 		}, 1000);
 
 		prevFeed.current = newFeed;
 
 		setNotesFeed(newFeed);
+
+		console.log(cursorPosition +" : "+ newFeed.length)
+		if (cursorPosition > newFeed.length - 1) {
+			setCursorPosition(newFeed.length - 1)
+		}
 
 	}
 
