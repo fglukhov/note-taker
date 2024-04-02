@@ -12,7 +12,16 @@ export const useKeyPress = (keys, callback, node = null) => {
     (event) => {
       // check if one of the key is part of the ones we want
       if (keys.some((key) => event.key === key) || keys.length == 0) {
-        callbackRef.current(event);
+
+				if (
+					event.key == "Space"
+					// || event.key == "ArrowDown"
+					// || event.key == "ArrowUp"
+				) {
+					event.preventDefault();
+				}
+
+				callbackRef.current(event);
       }
     },
     [keys]
