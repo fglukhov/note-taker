@@ -37,9 +37,42 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
 	const [prevTitle, setPrevTitle] = useState(props.title);
 	const [isNew, setIsNew] = useState(props.isNew);
 
+	//const { isInViewport, ref } = useInViewport();
+
 	const eventKeyRef = useRef(null);
 
-	const notesFeed = useNotes();
+	const notesFeed = useNotes()
+
+	const elementRef = useRef<HTMLDivElement>(null);
+	// const isOnScreen = useOnScreen(elementRef);
+	//
+	// console.log(elementRef.current)
+
+	const onElementRef = (node) => {
+		if (node && props.isFocus) {
+			node.scrollIntoView({
+				//behavior: "smooth",
+				block: "nearest",
+				inline: "start"
+			});
+		}
+	}
+
+	// if (props.isFocus && !isOnScreen) {
+	//
+	//
+	// 	if (elementRef.current != null) {
+	//
+	// 		console.log('need to scroll to: ' + title)
+	// 		elementRef.current.scrollIntoView({
+	// 			behavior: "smooth",
+	// 			block: "nearest",
+	// 			inline: "start"
+	// 		});
+	//
+	// 	}
+	//
+	// }
 
 	const onKeyPress = (event) => {
 
@@ -89,7 +122,7 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
 	};
 
 	if (props.isFocus) {
-		useKeyPress(["Escape", "Delete", " "], onKeyPress);
+		useKeyPress(["Escape", "Delete"], onKeyPress);
 	} else {
 		useKeyPress([""], onKeyPress);
 	}
@@ -107,49 +140,72 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
 
 		<div
 			className={styles.notes_list_item + (props.isFocus ? " " + styles.focus : "") + (props.complete ? " " + styles.complete : "")}
-			id={props.id}>
+			id={props.id}
 
-			{!(props.isEdit && props.isFocus) ? (
-				<div className={styles.notes_list_item_title_wrapper}>
-					{/*<div style={{color: "red", fontSize: "12px",}}>{props.sort}</div>*/}
-					<div className="notes-item-title">
-						{/*<span style={{color: "red", fontSize: "12px",}}>{props.sort+": "}</span>*/}
-						{title}
-					</div>
-				</div>
-			) : (
-				<div className={styles.notes_list_item_title_wrapper}>
-					{/*<div style={{color: "red", fontSize: "12px", paddingBottom: "3px"}}>{props.sort}</div>*/}
-					<div className={styles.notes_list_item_form}>
-						<form onSubmit={(e) => {
-							if (title) {
-								if (!isNew) {
-									props.onEdit(id, title);
+		>
+			<div className={styles.notes_list_item_title_wrapper} ref={onElementRef}>
+				{/*<div>Is in viewport: {isOnScreen ? 'true' : 'false'}</div>*/}
+				{!(props.isEdit && props.isFocus) ? (
+					<>
+						{/*<div style={{color: "red", fontSize: "12px",}}>{props.sort}</div>*/}
+						<div className="notes-item-title">
+							{/*<span style={{color: "red", fontSize: "12px",}}>{props.sort + ": "}</span>*/}
+							{title}
+						</div>
+					</>
+				) : (
+					<>
+						{/*<div style={{color: "red", fontSize: "12px", paddingBottom: "3px"}}>{props.sort}</div>*/}
+						<div className={styles.notes_list_item_form}>
+							<form onSubmit={(e) => {
+								if (title) {
+									if (!isNew) {
+										props.onEdit(id, title);
+									} else {
+										setIsNew(false);
+										setPrevTitle(title);
+										props.onAdd(id, title);
+									}
+									editTitle(e).then(() => {
+									});
 								} else {
-									setIsNew(false);
-									setPrevTitle(title);
-									props.onAdd(id, title);
+
+									// TODO консоль выдает 'Form submission canceled because the form is not connected'
+
+									props.onDelete(id, parentId, sort)
 								}
-								editTitle(e).then(() => {
-								});
-							} else {
+							}}>
+								<input
+									//autoFocus
+									onChange={(e) => setTitle(e.target.value)}
+									placeholder="Title"
+									type="text"
+									value={title}
+									onFocus={
+										(e) => {
+											//e.preventDefault()
 
-								// TODO консоль выдает 'Form submission canceled because the form is not connected'
+										}
+									}
+									ref={(el) => {
 
-								props.onDelete(id, parentId, sort)
-							}
-						}}>
-							<input
-								autoFocus
-								onChange={(e) => setTitle(e.target.value)}
-								placeholder="Title"
-								type="text"
-								value={title}
-							/>
-						</form>
-					</div>
-				</div>
-			)}
+										if (el !== null && props.isFocus) {
+
+											//console.log(el)
+
+											el.focus({
+												preventScroll: true
+											});
+
+										}
+									}}
+								/>
+							</form>
+						</div>
+					</>
+				)}
+
+			</div>
 
 			{notesFeed.map((childNote, i) => {
 

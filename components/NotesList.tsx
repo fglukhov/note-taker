@@ -7,7 +7,6 @@ import {NotesListItemProps} from "./NotesListItem";
 import {useKeyPress} from '../lib/useKeyPress';
 import styles from './NotesList.module.scss'
 import Router from "next/router";
-import {set} from "immutable";
 
 type Props = {
 	feed: NotesListItemProps[]
@@ -17,6 +16,26 @@ let updateTimeout = null;
 //let reorderInterval = null;
 let timeout = null;
 
+
+
+//console.log(elementRef.current)
+// if (props.isFocus && !isOnScreen) {
+//
+//
+// 	if (elementRef.current != null) {
+//
+// 		console.log('need to scroll to: ' + title)
+// 		elementRef.current.scrollIntoView({
+// 			behavior: "smooth",
+// 			block: "nearest",
+// 			inline: "start"
+// 		});
+//
+// 	}
+//
+//
+// }
+
 const NotesList: React.FC<Props> = (props) => {
 
 	const savedReorderCallback = useRef(null);
@@ -24,6 +43,7 @@ const NotesList: React.FC<Props> = (props) => {
 	const savedUpdatedIds = useRef([]);
 
 	const prevFeed = useRef(props.feed);
+	const syncFeed = useRef(null);
 
 	const eventKeyRef = useRef(null);
 	const lastKeyRef = useRef(null);
@@ -46,14 +66,14 @@ const NotesList: React.FC<Props> = (props) => {
 
 		// TODO нехорошо, что заметки не синхронизируются при открытой форме, но в противном случае сбивается сортировка
 
-		if (isChanged && !isUpdating && !isEditTitle) {
+		if (isChanged && !isUpdating) {
 
 			console.log('refresh')
 
 			setIsChanged(false);
 			setIsUpdating(true);
 
-			reorderNotes(prevFeed.current, notesFeed, savedUpdatedIds.current).then(() => {
+			reorderNotes(prevFeed.current, syncFeed.current, savedUpdatedIds.current).then(() => {
 				setIsUpdating(false);
 			});
 
@@ -103,6 +123,8 @@ const NotesList: React.FC<Props> = (props) => {
 		if (!isEditTitle) {
 
 			if ((eventKeyRef.current === "ArrowUp" || eventKeyRef.current === "ArrowDown") && !isCtrlCommand) {
+
+				event.preventDefault();
 
 				lastKeyRef.current = null;
 				clearTimeout(timeout);
@@ -234,7 +256,7 @@ const NotesList: React.FC<Props> = (props) => {
 
 					//setIsChanged(true)
 
-					prevFeed.current = newFeed;
+					syncFeed.current = newFeed;
 
 					setNotesFeed(newFeed);
 
@@ -324,7 +346,7 @@ const NotesList: React.FC<Props> = (props) => {
 
 					}, 1000);
 
-					prevFeed.current = newFeed;
+					syncFeed.current = newFeed;
 
 					setNotesFeed(newFeed);
 					setCursorPosition(cursorPosition + positionShift)
@@ -342,6 +364,8 @@ const NotesList: React.FC<Props> = (props) => {
 			// Sort
 
 			if ((eventKeyRef.current == "ArrowUp" || eventKeyRef.current == "ArrowDown") && isCtrlCommand && !isEditTitle) {
+
+
 
 				if (updateTimeout) {
 					clearTimeout(updateTimeout);
@@ -410,7 +434,7 @@ const NotesList: React.FC<Props> = (props) => {
 
 					}, 1000);
 
-					prevFeed.current = newFeed;
+					syncFeed.current = newFeed;
 
 					setNotesFeed(newFeed);
 
@@ -422,6 +446,8 @@ const NotesList: React.FC<Props> = (props) => {
 			// Complete
 
 			if (eventKeyRef.current == "Space" && !isEditTitle) {
+
+				event.preventDefault();
 
 				if (updateTimeout) {
 					clearTimeout(updateTimeout);
@@ -472,7 +498,7 @@ const NotesList: React.FC<Props> = (props) => {
 
 				}, 1000);
 
-				prevFeed.current = newFeed;
+				syncFeed.current = newFeed;
 
 				setNotesFeed(newFeed);
 
@@ -517,7 +543,7 @@ const NotesList: React.FC<Props> = (props) => {
 
 		if (event == null) {
 
-			console.log('event null')
+			//console.log('event null')
 
 			event = {
 				shiftKey: false,
@@ -681,7 +707,7 @@ const NotesList: React.FC<Props> = (props) => {
 
 		let curNote = notesFeed.find(n => n.id==noteId);
 
-		console.log(title)
+		//console.log(title)
 
 		let newFeed = notesFeed.map((n) => {
 			if (n.id === noteId) {
@@ -698,6 +724,7 @@ const NotesList: React.FC<Props> = (props) => {
 
 		setIsEditTitle(false);
 
+
 		updatedIds.current.push(noteId);
 
 		if (curNote.isNew) {
@@ -712,7 +739,7 @@ const NotesList: React.FC<Props> = (props) => {
 
 			});
 
-			console.log('add new form')
+			//console.log('add new form')
 
 			const newId = crypto.randomUUID();
 
@@ -728,7 +755,9 @@ const NotesList: React.FC<Props> = (props) => {
 				}
 			];
 
-			console.log(curNote.sort)
+			//console.log(curNote.sort)
+
+			syncFeed.current = newFeed;
 
 			newFeed = newFeed.map((n) => {
 
@@ -766,7 +795,7 @@ const NotesList: React.FC<Props> = (props) => {
 
 		}, 1000);
 
-		prevFeed.current = newFeed;
+
 
 		setNotesFeed(newFeed);
 
@@ -866,7 +895,7 @@ const NotesList: React.FC<Props> = (props) => {
 
 		});
 
-		console.log(newFeed)
+		//console.log(newFeed)
 
 		updateTimeout = setTimeout(function () {
 
@@ -879,11 +908,11 @@ const NotesList: React.FC<Props> = (props) => {
 
 		}, 1000);
 
-		prevFeed.current = newFeed;
+		syncFeed.current = newFeed;
 
 		setNotesFeed(newFeed);
 
-		console.log(cursorPosition +" : "+ newFeed.length)
+		//console.log(cursorPosition +" : "+ newFeed.length)
 		if (cursorPosition > newFeed.length - 1) {
 			setCursorPosition(newFeed.length - 1)
 		}
