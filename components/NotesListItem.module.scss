@@ -56,3 +56,22 @@
 	text-decoration: line-through;
 	color: $gray-color;
 }
+
+.notes_list_item_title {
+	position: relative;
+}
+
+.notes_list_item_arrow {
+	width: 20px;
+	height: 20px;
+	position: absolute;
+	left: 0;
+	top: 0;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+}
+
+.notes_list_item_arrow:after {
+
+}
