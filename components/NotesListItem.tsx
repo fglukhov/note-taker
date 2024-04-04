@@ -3,6 +3,8 @@ import {useKeyPress} from '../lib/useKeyPress';
 import {getFamily} from "./NotesList";
 import styles from './NotesListItem.module.scss'
 import {useNotes} from "./NotesContext";
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { byPrefixAndName } from '@awesome.me/kit-KIT_CODE/icons'
 
 export type NotesListItemProps = {
 	id: string;
@@ -136,6 +138,8 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
 	let position = props.position + 1;
 	let familyCount = 0;
 
+	console.log(props)
+
 	return (
 
 		<div
@@ -143,13 +147,15 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
 			id={props.id}
 
 		>
+			<div>"children: " + {props.familyCount > 1 && "true"}</div>
 			<div className={styles.notes_list_item_title_wrapper} ref={onElementRef}>
 				{/*<div>Is in viewport: {isOnScreen ? 'true' : 'false'}</div>*/}
 				{!(props.isEdit && props.isFocus) ? (
 					<>
 						{/*<div style={{color: "red", fontSize: "12px",}}>{props.sort}</div>*/}
-						<div className="notes-item-title">
+						<div className={styles.notes_list_item_title}>
 							{/*<span style={{color: "red", fontSize: "12px",}}>{props.sort + ": "}</span>*/}
+							{props.familyCount > 1 && <div className={styles.notes_list_item_arrow}></div>}
 							{title}
 						</div>
 					</>
