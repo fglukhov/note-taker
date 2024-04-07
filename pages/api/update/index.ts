@@ -19,7 +19,7 @@ export default async function handle(req, res) {
 
 	const session = await getSession({ req });
 
-	const updateRow = async (id, sort, parentId, complete, title) => {
+	const updateRow = async (id, sort, parentId, complete, collapsed, title) => {
 
 		await prisma.note.upsert({
 			where: {
@@ -30,6 +30,7 @@ export default async function handle(req, res) {
 				sort: sort,
 				parentId: parentId,
 				complete: complete,
+				collapsed: collapsed,
 				title: title,
 			},
 
@@ -63,7 +64,7 @@ export default async function handle(req, res) {
 			if (curNote == undefined) {
 				deleteRow(id)
 			} else {
-				updateRow(id, curNote.sort, curNote.parentId, curNote.complete, curNote.title)
+				updateRow(id, curNote.sort, curNote.parentId, curNote.complete, curNote.collapsed, curNote.title)
 			}
 		})
 	)
