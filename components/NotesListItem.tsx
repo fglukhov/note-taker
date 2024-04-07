@@ -3,8 +3,10 @@ import {useKeyPress} from '../lib/useKeyPress';
 import {getFamily} from "./NotesList";
 import styles from './NotesListItem.module.scss'
 import {useNotes} from "./NotesContext";
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { byPrefixAndName } from '@awesome.me/kit-KIT_CODE/icons'
+
+import FeatherIcon from 'feather-icons-react';
+
+
 
 export type NotesListItemProps = {
 	id: string;
@@ -28,6 +30,7 @@ export type NotesListItemProps = {
 	onDelete?: (noteId, parentId, sort) => any;
 	parentId?: string;
 	complete?: boolean;
+	collapsed?: boolean;
 }
 
 const NotesListItem: React.FC<NotesListItemProps> = (props) => {
@@ -138,16 +141,17 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
 	let position = props.position + 1;
 	let familyCount = 0;
 
-	console.log(props)
+	//console.log(props)
 
 	return (
 
 		<div
-			className={styles.notes_list_item + (props.isFocus ? " " + styles.focus : "") + (props.complete ? " " + styles.complete : "")}
+			className={styles.notes_list_item + (props.isFocus ? " " + styles.focus : "") + (props.complete ? " " + styles.complete : "") + (props.collapsed ? " " + styles.collapsed : "")}
 			id={props.id}
 
 		>
-			<div>"children: " + {props.familyCount > 1 && "true"}</div>
+			{/*<div>"collapsed: " + {props.collapsed && "true"}</div>*/}
+			{/*<div>"children: " + {props.familyCount > 1 && "true"}</div>*/}
 			<div className={styles.notes_list_item_title_wrapper} ref={onElementRef}>
 				{/*<div>Is in viewport: {isOnScreen ? 'true' : 'false'}</div>*/}
 				{!(props.isEdit && props.isFocus) ? (
@@ -155,7 +159,7 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
 						{/*<div style={{color: "red", fontSize: "12px",}}>{props.sort}</div>*/}
 						<div className={styles.notes_list_item_title}>
 							{/*<span style={{color: "red", fontSize: "12px",}}>{props.sort + ": "}</span>*/}
-							{props.familyCount > 1 && <div className={styles.notes_list_item_arrow}></div>}
+							{props.familyCount > 1 && <div className={styles.notes_list_item_arrow}><FeatherIcon icon="chevron-down" /></div>}
 							{title}
 						</div>
 					</>
@@ -232,6 +236,7 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
 							familyCount={familyCount}
 							title={childNote.title}
 							complete={childNote.complete}
+							collapsed={childNote.collapsed}
 							parentId={childNote.parentId}
 							cursorPosition={props.cursorPosition}
 							isFocus={position === props.cursorPosition}

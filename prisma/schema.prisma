@@ -29,6 +29,7 @@ model Note {
   sort      Int      @default(1)
   parentId  String?
   complete  Boolean  @default(false)
+  collapsed  Boolean  @default(false)
 }
 
 model Account {
