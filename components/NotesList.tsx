@@ -8,6 +8,8 @@ import {useKeyPress} from '../lib/useKeyPress';
 import styles from './NotesList.module.scss'
 import Router from "next/router";
 
+
+
 type Props = {
 	feed: NotesListItemProps[]
 }
@@ -53,7 +55,7 @@ const NotesList: React.FC<Props> = (props) => {
 	const prevCursorPosition = useRef(null);
 	const prevTitle = useRef(null);
 
-	const [cursorPosition, setCursorPosition] = useState(null);
+	const [cursorPosition, setCursorPosition] = useState(0);
 	const [notesFeed, setNotesFeed] = useState(props.feed);
 
 
@@ -129,10 +131,59 @@ const NotesList: React.FC<Props> = (props) => {
 				lastKeyRef.current = null;
 				clearTimeout(timeout);
 
+				let curNote = notesFeed.find(n => n.id==focusId.current);
+
+				let parentFamily = getFamily(curNote.parentId, notesFeed);
+
+				// @ts-ignore
+				let curNoteFamily = getFamily(curNote.id, notesFeed);
+
+				let parentId = curNote.parentId;
+
+				const siblingsIds = [];
+
+				notesFeed.map(n => {
+
+					if (n.parentId == parentId) {
+						siblingsIds.push(n.id)
+					}
+
+				});
+
+				let prevSiblingId = null;
+
+				siblingsIds.map((id, i) => {
+
+					if (id === focusId.current && i > 0) {
+
+						prevSiblingId = siblingsIds[i-1];
+
+					}
+
+				});
+
+				let prevSibling = notesFeed.find(n => n.id==prevSiblingId);
+
+				let positionShift = 0;
+
+				if (curNote.collapsed && eventKeyRef.current == "ArrowDown") {
+
+					positionShift = curNoteFamily.length - 1;
+
+				}
+
+				if (prevSibling !== undefined && prevSibling.collapsed && eventKeyRef.current == "ArrowUp") {
+
+					let prevNoteFamily = getFamily(prevSiblingId, notesFeed);
+
+					positionShift = prevNoteFamily.length - 1;
+
+				}
+
 				if (eventKeyRef.current === "ArrowUp" && cursorPosition > 0) {
-					setCursorPosition(cursorPosition - 1);
+					setCursorPosition(cursorPosition - 1 - positionShift);
 				} else if (eventKeyRef.current === "ArrowDown" && cursorPosition < notesFeed.length - 1 && cursorPosition !== null) {
-					setCursorPosition(cursorPosition + 1);
+					setCursorPosition(cursorPosition + 1 + positionShift);
 				} else if (eventKeyRef.current === "ArrowDown" && cursorPosition === null) {
 					setCursorPosition(0);
 				}
@@ -360,6 +411,58 @@ const NotesList: React.FC<Props> = (props) => {
 				}
 
 			}
+
+			// Collapse
+
+			if (eventKeyRef.current == "ArrowRight" || eventKeyRef.current == "ArrowLeft" && !isCtrlCommand && !isEditTitle) {
+
+				let collapsed = false;
+
+				if (eventKeyRef.current == "ArrowLeft") {
+					collapsed = true;
+				}
+
+				if (updateTimeout) {
+					clearTimeout(updateTimeout);
+				}
+
+				let curNote = notesFeed.find(n => n.id==focusId.current);
+
+				let newFeed = notesFeed.map((n, i) => {
+					if (n.id === curNote.id) {
+
+						if (!updatedIds.current.includes(n.id)) updatedIds.current.push(n.id)
+
+						return {
+							...n,
+							collapsed: collapsed,
+						}
+
+					}
+					else {
+						return n;
+					}
+
+				});
+
+				newFeed.sort((a,b) => a.sort - b.sort);
+
+				updateTimeout = setTimeout(function () {
+
+					setIsChanged(true);
+
+					savedUpdatedIds.current = updatedIds.current;
+
+					updatedIds.current = [];
+
+				}, 1000);
+
+				syncFeed.current = newFeed;
+
+				setNotesFeed(newFeed);
+
+			}
+
 
 			// Sort
 
@@ -935,6 +1038,8 @@ const NotesList: React.FC<Props> = (props) => {
 
 				<div className={styles.notes_list}>
 
+
+
 					<NotesProvider feed={notesFeed}>
 
 						{notesFeed.map((note, i) => {
@@ -959,6 +1064,7 @@ const NotesList: React.FC<Props> = (props) => {
 										familyCount={familyCount}
 										title={note.title}
 										complete={note.complete}
+										collapsed={note.collapsed}
 										parentId={note.parentId}
 										cursorPosition={cursorPosition}
 										isFocus={note.position === cursorPosition}
@@ -1032,6 +1138,14 @@ const NotesList: React.FC<Props> = (props) => {
 							</div>
 							<div className={styles.hints_item_descr}>
 								Navigate
+							</div>
+						</div>
+						<div className={styles.hints_item}>
+							<div className={styles.hints_item_key}>
+								<div className={styles.key}>←</div><div className={styles.key}>→</div>
+							</div>
+							<div className={styles.hints_item_descr}>
+								Collapse/expand
 							</div>
 						</div>
 						<div className={styles.hints_item}>
