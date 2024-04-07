@@ -219,6 +219,8 @@ const NotesList: React.FC<Props> = (props) => {
 
 			if (eventKeyRef.current == "ArrowRight" && isCtrlCommand && !isEditTitle) {
 
+				console.log('indent')
+
 				if (updateTimeout) {
 					clearTimeout(updateTimeout);
 				}
@@ -275,6 +277,7 @@ const NotesList: React.FC<Props> = (props) => {
 								parentId: newParentId,
 								sort: newSort
 							}
+
 						} else if (n.parentId === curNote.parentId && n.sort > curNote.sort) {
 
 							if (!updatedIds.current.includes(n.id)) updatedIds.current.push(n.id)
@@ -308,6 +311,8 @@ const NotesList: React.FC<Props> = (props) => {
 					//setIsChanged(true)
 
 					syncFeed.current = newFeed;
+
+					console.log(newFeed)
 
 					setNotesFeed(newFeed);
 
@@ -414,7 +419,7 @@ const NotesList: React.FC<Props> = (props) => {
 
 			// Collapse
 
-			if (eventKeyRef.current == "ArrowRight" || eventKeyRef.current == "ArrowLeft" && !isCtrlCommand && !isEditTitle) {
+			if ((eventKeyRef.current == "ArrowRight" || eventKeyRef.current == "ArrowLeft") && !isCtrlCommand && !isEditTitle) {
 
 				let collapsed = false;
 
