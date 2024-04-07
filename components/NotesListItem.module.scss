@@ -19,7 +19,7 @@
 .notes_list_item_title_wrapper {
 	background: white;
 	transition: box-shadow 0.1s ease-in;
-	padding: 8px 20px;
+	padding: 8px 20px 8px 30px;
 	border-radius: 4px;
 	font-size: 16px;
 	line-height: 1.4;
@@ -57,6 +57,10 @@
 	color: $gray-color;
 }
 
+.notes_list_item.collapsed .notes_list_item {
+	display: none;
+}
+
 .notes_list_item_title {
 	position: relative;
 }
@@ -65,13 +69,15 @@
 	width: 20px;
 	height: 20px;
 	position: absolute;
-	left: 0;
-	top: 0;
+	left: -24px;
+	top: 1px;
 	display: flex;
 	justify-content: center;
 	align-items: center;
+	transition: all .15s ease;
 }
 
-.notes_list_item_arrow:after {
-
+.collapsed > .notes_list_item_title_wrapper .notes_list_item_arrow {
+	transform: rotate(-90deg);
 }
+
