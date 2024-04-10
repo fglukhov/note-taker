@@ -156,16 +156,17 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
 				{/*<div>Is in viewport: {isOnScreen ? 'true' : 'false'}</div>*/}
 				{!(props.isEdit && props.isFocus) ? (
 					<>
-						{/*<div style={{color: "red", fontSize: "12px",}}>{props.sort}</div>*/}
+						{/*<div style={{color: "red", fontSize: "12px", paddingBottom: "3px"}}>{props.sort}</div>*/}
 						<div className={styles.notes_list_item_title}>
-							{/*<span style={{color: "red", fontSize: "12px",}}>{props.sort + ": "}</span>*/}
-							{props.familyCount > 1 && <div className={styles.notes_list_item_arrow}><FeatherIcon icon="chevron-down" /></div>}
+							<span style={{color: "red", fontSize: "12px",}}>{props.position + ": "}</span>
+							{props.familyCount > 1 &&
+								<div className={styles.notes_list_item_arrow}><FeatherIcon icon="chevron-down"/></div>}
 							{title}
 						</div>
 					</>
 				) : (
 					<>
-						{/*<div style={{color: "red", fontSize: "12px", paddingBottom: "3px"}}>{props.sort}</div>*/}
+						<div style={{color: "red", fontSize: "12px", paddingBottom: "3px"}}>{props.sort}</div>
 						<div className={styles.notes_list_item_form}>
 							<form onSubmit={(e) => {
 								if (title) {
