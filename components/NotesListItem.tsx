@@ -166,7 +166,7 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
 					</>
 				) : (
 					<>
-						<div style={{color: "red", fontSize: "12px", paddingBottom: "3px"}}>{props.sort}</div>
+						{/*<div style={{color: "red", fontSize: "12px", paddingBottom: "3px"}}>{props.sort}</div>*/}
 						<div className={styles.notes_list_item_form}>
 							<form onSubmit={(e) => {
 								if (title) {
