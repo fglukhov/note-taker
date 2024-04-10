@@ -8,8 +8,6 @@ import {useKeyPress} from '../lib/useKeyPress';
 import styles from './NotesList.module.scss'
 import Router from "next/router";
 
-
-
 type Props = {
 	feed: NotesListItemProps[]
 }
@@ -17,26 +15,6 @@ type Props = {
 let updateTimeout = null;
 //let reorderInterval = null;
 let timeout = null;
-
-
-
-//console.log(elementRef.current)
-// if (props.isFocus && !isOnScreen) {
-//
-//
-// 	if (elementRef.current != null) {
-//
-// 		console.log('need to scroll to: ' + title)
-// 		elementRef.current.scrollIntoView({
-// 			behavior: "smooth",
-// 			block: "nearest",
-// 			inline: "start"
-// 		});
-//
-// 	}
-//
-//
-// }
 
 const NotesList: React.FC<Props> = (props) => {
 
@@ -53,6 +31,7 @@ const NotesList: React.FC<Props> = (props) => {
 	const prevFocusId = useRef(null);
 
 	const prevCursorPosition = useRef(null);
+	const saveCursorPosition = useRef(null);
 	const prevTitle = useRef(null);
 
 	const [cursorPosition, setCursorPosition] = useState(0);
@@ -63,6 +42,8 @@ const NotesList: React.FC<Props> = (props) => {
 	const [isEditTitle, setIsEditTitle] = useState(false);
 	const [isUpdating, setIsUpdating] = useState(false);
 	const [isChanged, setIsChanged] = useState(false);
+
+
 
 	function reorderCallback() {
 
@@ -140,29 +121,33 @@ const NotesList: React.FC<Props> = (props) => {
 
 				let parentId = curNote.parentId;
 
-				const siblingsIds = [];
+				// const navIds = [];
+				//
+				// notesFeed.map(n => {
+				//
+				// 	if (n.parentId == parentId) {
+				// 		navIds.push(n.id)
+				// 	}
+				//
+				// });
 
-				notesFeed.map(n => {
+				let prevNavId = null;
 
-					if (n.parentId == parentId) {
-						siblingsIds.push(n.id)
+				notesFeed.map((n) => {
+
+					if (n.position == cursorPosition - 1 && cursorPosition > 0) {
+
+						prevNavId = n.id;
+
 					}
 
 				});
 
-				let prevSiblingId = null;
 
-				siblingsIds.map((id, i) => {
+				// TODO искать не соседей одного уровня, а все заметки по position
 
-					if (id === focusId.current && i > 0) {
+				let prevNav = notesFeed.find(n => n.id==prevNavId);
 
-						prevSiblingId = siblingsIds[i-1];
-
-					}
-
-				});
-
-				let prevSibling = notesFeed.find(n => n.id==prevSiblingId);
 
 				let positionShift = 0;
 
@@ -172,17 +157,62 @@ const NotesList: React.FC<Props> = (props) => {
 
 				}
 
-				if (prevSibling !== undefined && prevSibling.collapsed && eventKeyRef.current == "ArrowUp") {
+				// if (prevNav !== undefined && prevNav.collapsed && eventKeyRef.current == "ArrowUp") {
+				//
+				// 	console.log(prevNav.title)
+				//
+				// 	let prevNoteFamily = getFamily(prevNavId, notesFeed);
+				//
+				// 	positionShift = prevNoteFamily.length - 1;
+				//
+				// }
+					//console.log(cursorPosition)
 
-					let prevNoteFamily = getFamily(prevSiblingId, notesFeed);
 
-					positionShift = prevNoteFamily.length - 1;
-
-				}
 
 				if (eventKeyRef.current === "ArrowUp" && cursorPosition > 0) {
-					setCursorPosition(cursorPosition - 1 - positionShift);
-				} else if (eventKeyRef.current === "ArrowDown" && cursorPosition < notesFeed.length - 1 && cursorPosition !== null) {
+
+
+					setCursorPosition(cursorPosition - 1);
+					saveCursorPosition.current = cursorPosition - 1;
+
+					let navNote = notesFeed.find(n => n.id == focusId.current);
+
+					// TODO определить, есть ли у navNote свернутый родитель и посчитать размер его семьи
+
+					let isCollapsedParent = false;
+
+					let navParentId = navNote.parentId;
+
+					let navParents = [];
+
+					while (navParentId != undefined && navParentId != "root") {
+
+						let navParent = notesFeed.find(n => n.id == navParentId);
+
+						navParents.push({
+							id: navParentId,
+							collapsed: navParent.collapsed
+						})
+
+						navParentId = navParent.parentId;
+
+					}
+
+					let navParentsReverted = navParents.reverse();
+
+					for (var i = 0; i < navParentsReverted.length; i++) {
+						if (navParentsReverted[i].collapsed) {
+							positionShift = getFamily(navParentsReverted[i].id, notesFeed).length;
+							break;
+						}
+					}
+
+					if (positionShift != 0) {
+						setCursorPosition(saveCursorPosition.current - positionShift + 1);
+					}
+
+				} else if (eventKeyRef.current === "ArrowDown" && cursorPosition + positionShift < notesFeed.length - 1 && cursorPosition !== null) {
 					setCursorPosition(cursorPosition + 1 + positionShift);
 				} else if (eventKeyRef.current === "ArrowDown" && cursorPosition === null) {
 					setCursorPosition(0);
@@ -762,6 +792,11 @@ const NotesList: React.FC<Props> = (props) => {
 				return {
 					...n,
 					sort: n.sort + 1
+				}
+			} else if (insertChild && n.id == parentId) {
+				return {
+					...n,
+					collapsed: false
 				}
 			} else {
 				return n;
