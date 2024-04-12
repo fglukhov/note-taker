@@ -57,8 +57,6 @@ export default async function handle(req, res) {
 
 	}
 
-
-
 	const results = await Promise.all(
 
 		ids.map(id => {
@@ -70,6 +68,8 @@ export default async function handle(req, res) {
 			}
 		})
 	)
+
+
 
 	res.json(results);
 
