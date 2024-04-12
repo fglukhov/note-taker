@@ -249,8 +249,6 @@ const NotesList: React.FC<Props> = (props) => {
 
 			if (eventKeyRef.current == "ArrowRight" && isCtrlCommand && !isEditTitle) {
 
-				console.log('indent')
-
 				if (updateTimeout) {
 					clearTimeout(updateTimeout);
 				}
@@ -341,8 +339,6 @@ const NotesList: React.FC<Props> = (props) => {
 					//setIsChanged(true)
 
 					syncFeed.current = newFeed;
-
-					console.log(newFeed)
 
 					setNotesFeed(newFeed);
 
@@ -681,8 +677,6 @@ const NotesList: React.FC<Props> = (props) => {
 
 		if (event == null) {
 
-			//console.log('event null')
-
 			event = {
 				shiftKey: false,
 				altKey: false
@@ -813,7 +807,6 @@ const NotesList: React.FC<Props> = (props) => {
 			setCursorPosition(insertAt);
 			setIsEditTitle(true);
 			setNotesFeed(newFeed);
-			//console.log('insert note')
 
 		}, 1);
 
@@ -850,8 +843,6 @@ const NotesList: React.FC<Props> = (props) => {
 
 		let curNote = notesFeed.find(n => n.id==noteId);
 
-		//console.log(title)
-
 		let newFeed = notesFeed.map((n) => {
 			if (n.id === noteId) {
 				return {
@@ -882,8 +873,6 @@ const NotesList: React.FC<Props> = (props) => {
 
 			});
 
-			//console.log('add new form')
-
 			const newId = crypto.randomUUID();
 
 			newFeed = [
@@ -897,8 +886,6 @@ const NotesList: React.FC<Props> = (props) => {
 					parentId: curNote.parentId
 				}
 			];
-
-			//console.log(curNote.sort)
 
 			syncFeed.current = newFeed;
 
@@ -938,11 +925,9 @@ const NotesList: React.FC<Props> = (props) => {
 
 		}, 1000);
 
-
+		syncFeed.current = newFeed;
 
 		setNotesFeed(newFeed);
-
-
 
 	}
 
