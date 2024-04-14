@@ -57,6 +57,7 @@ const NotesList: React.FC<Props> = (props) => {
 			setIsUpdating(true);
 
 			reorderNotes(prevFeed.current, syncFeed.current, savedUpdatedIds.current).then(() => {
+				//console.log(syncFeed.current)
 				setIsUpdating(false);
 			});
 
@@ -534,8 +535,8 @@ const NotesList: React.FC<Props> = (props) => {
 				if (sortShift !=0) {
 					let shiftedNoteFamily = getFamily(shiftedNote.id, notesFeed);
 
-					updatedIds.current.push(curNote.id)
-					updatedIds.current.push(shiftedNote.id)
+					if (!updatedIds.current.includes(curNote.id)) updatedIds.current.push(curNote.id)
+					if (!updatedIds.current.includes(shiftedNote.id)) updatedIds.current.push(shiftedNote.id)
 
 					let newFeed = notesFeed.map((n) => {
 
@@ -821,11 +822,13 @@ const NotesList: React.FC<Props> = (props) => {
 		const body = { prevFeed, feed, ids };
 
 		try {
-			await fetch('/api/update/', {
+			const response = await fetch('/api/update/', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify(body),
 			});
+
+			//console.log(response)
 
 		} catch (error) {
 			console.error(error);
@@ -859,7 +862,7 @@ const NotesList: React.FC<Props> = (props) => {
 		setIsEditTitle(false);
 
 
-		updatedIds.current.push(noteId);
+		if (!updatedIds.current.includes(noteId.id)) updatedIds.current.push(noteId);
 
 		if (curNote.isNew) {
 
@@ -867,7 +870,7 @@ const NotesList: React.FC<Props> = (props) => {
 
 				if (n.parentId == curNote.parentId && n.sort >= curNote.sort && n.id != noteId) {
 
-					updatedIds.current.push(n.id);
+					if (!updatedIds.current.includes(n.id)) updatedIds.current.push(n.id);
 
 				}
 
@@ -910,10 +913,9 @@ const NotesList: React.FC<Props> = (props) => {
 
 			setCursorPosition(cursorPosition + 1)
 
+		} else {
+			syncFeed.current = newFeed;
 		}
-
-
-
 
 		updateTimeout = setTimeout(function () {
 
@@ -925,7 +927,7 @@ const NotesList: React.FC<Props> = (props) => {
 
 		}, 1000);
 
-		syncFeed.current = newFeed;
+
 
 		setNotesFeed(newFeed);
 
@@ -1001,7 +1003,7 @@ const NotesList: React.FC<Props> = (props) => {
 		//const deletedCount = notesFeed.length - newFeed.length;
 
 		notesFeed.map(n => {
-			if (n.parentId === curNote.parentId && n.sort > curNote.sort) updatedIds.current.push(n.id)
+			if (n.parentId === curNote.parentId && n.sort > curNote.sort && !updatedIds.current.includes(n.id)) updatedIds.current.push(n.id)
 		})
 
 		let newFeed = notesFeed.filter(n => {

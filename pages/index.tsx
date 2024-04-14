@@ -3,9 +3,10 @@ import { GetServerSideProps } from "next"
 import Layout from "../components/Layout"
 import NotesList, {getFamily} from "../components/NotesList"
 import { NotesListItemProps } from "../components/NotesListItem"
-import prisma from '../lib/prisma';
+
+import {createClient} from "@supabase/supabase-js";
+
 import {getSession} from "next-auth/react";
-import {NotesProvider} from "../components/NotesContext";
 
 // index.tsx test
 export const getServerSideProps: GetServerSideProps = async (context) => {
@@ -16,17 +17,19 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
 
 	if (session) {
 
-		feed = await prisma.note.findMany({
-			orderBy: {
-				sort: 'asc',
-			},
-			where: {
-				// @ts-ignore
-				authorId: session.user.id
-			}
-		});
+		const supabase = createClient(
+			process.env.NEXT_SUPABASE_URL!,
+			process.env.NEXT_SUPABASE_ANON_KEY!
+		);
 
+		const notes = await supabase
+			.from('Note')
+			.select()
+			// @ts-ignore
+			.eq('authorId', session.user.id)
+			.order('sort', { ascending: true });
 
+		feed = notes.data;
 
 	}
 
