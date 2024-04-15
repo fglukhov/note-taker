@@ -21,7 +21,7 @@ model Post {
 
 model Note {
   id        String   @id @default(cuid())
-  title     String
+  title     String   @default(" ")
   content   String?
   author    User?    @relation(fields: [authorId], references: [id])
   authorId  String?
