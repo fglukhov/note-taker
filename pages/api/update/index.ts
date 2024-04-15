@@ -35,13 +35,17 @@ export default async function handle(req, res) {
 
 		} else {
 
+			// TODO создать функцию sql, которая обновляет только sort, parentId, complete и collapsed
+
+			// TODO понять, почему для обновления полей обязательно передавать title: потому что в schema.prisma не было дефолтного значения поля
+
 			updatedNotes.push({
 				id: id,
-				title: curNote.title,
+				//title: curNote.title,
 				sort: curNote.sort,
 				parentId: curNote.parentId,
 				// @ts-ignore
-				authorId: session.user.id,
+				//authorId: session.user.id,
 				complete: curNote.complete ? curNote.complete : false,
 				collapsed: curNote.collapsed ? curNote.collapsed : false,
 			});
@@ -65,7 +69,7 @@ export default async function handle(req, res) {
 		.delete()
 		.in('id', deletedIds)
 
-	console.log("done")
+	//console.log(updatedNotes)
 
 	//console.log(results)
 

@@ -8,6 +8,8 @@ import {useKeyPress} from '../lib/useKeyPress';
 import styles from './NotesList.module.scss'
 import Router from "next/router";
 
+import { isMacOs, isWindows } from 'react-device-detect';
+
 type Props = {
 	feed: NotesListItemProps[]
 }
@@ -41,9 +43,12 @@ const NotesList: React.FC<Props> = (props) => {
 
 	const [isEditTitle, setIsEditTitle] = useState(false);
 	const [isUpdating, setIsUpdating] = useState(false);
+	const [isAdding, setIsAdding] = useState(false);
 	const [isChanged, setIsChanged] = useState(false);
 
-
+	const controlKeyText = isMacOs ? "⌘" : "Ctrl";
+	const altKeyText = isMacOs ? "Option" : "Alt";
+	const deleteText = isMacOs ? "Fn + Backspace" : "Del";
 
 	function reorderCallback() {
 
@@ -242,7 +247,7 @@ const NotesList: React.FC<Props> = (props) => {
 
 				let curNote = notesFeed.find(n => n.id==focusId.current);
 
-				Router.push("/n/[id]", `/n/${curNote.id}`)
+				if (!isAdding) Router.push("/n/[id]", `/n/${curNote.id}`)
 
 			}
 
@@ -835,14 +840,79 @@ const NotesList: React.FC<Props> = (props) => {
 		}
 
 	};
+	const addNote = async (feed, newId, ids) => {
 
-	
+		const body = { feed, newId, ids };
+
+		try {
+			const response = await fetch('/api/add/', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify(body),
+			});
+
+		} catch (error) {
+			console.error(error);
+		}
+
+	};
+	const editNoteTitle = async (title, curId) => {
+
+		const body = { title, curId };
+
+		try {
+			const response = await fetch('/api/edittitle/', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify(body),
+			});
+
+		} catch (error) {
+			console.error(error);
+		}
+
+	};
 
 	const handleEdit = (noteId, title) => {
 
 		if (updateTimeout) {
 			clearTimeout(updateTimeout);
 		}
+
+
+		let newFeed = notesFeed.map((n) => {
+			if (n.id === noteId) {
+				return {
+					...n,
+					title: title,
+					isNew: false
+				}
+			} else {
+				return n;
+			}
+		});
+
+		let curNote = newFeed.find(n => n.id==noteId);
+
+		setIsEditTitle(false);
+
+		//setIsAdding(true);
+
+		editNoteTitle(curNote.title, curNote.id).then(() => {
+			//setIsAdding(false);
+		});
+
+		setNotesFeed(newFeed);
+
+	}
+
+	const handleAdd = (noteId, title) => {
+
+		//console.log('add')
+
+		// if (updateTimeout) {
+		// 	clearTimeout(updateTimeout);
+		// }
 
 		let curNote = notesFeed.find(n => n.id==noteId);
 
@@ -858,78 +928,71 @@ const NotesList: React.FC<Props> = (props) => {
 			}
 		});
 
-
 		setIsEditTitle(false);
-
 
 		if (!updatedIds.current.includes(noteId.id)) updatedIds.current.push(noteId);
 
-		if (curNote.isNew) {
+		newFeed.map(n => {
 
-			newFeed.map(n => {
+			if (n.parentId == curNote.parentId && n.sort >= curNote.sort && n.id != noteId) {
 
-				if (n.parentId == curNote.parentId && n.sort >= curNote.sort && n.id != noteId) {
+				if (!updatedIds.current.includes(n.id)) updatedIds.current.push(n.id);
 
-					if (!updatedIds.current.includes(n.id)) updatedIds.current.push(n.id);
+			}
 
+		});
+
+		const newId = crypto.randomUUID();
+
+		newFeed = [
+			...newFeed,
+			{
+				id: newId,
+				title: "",
+				sort: curNote.sort + 1,
+				//position: insertAt,
+				isNew: true,
+				parentId: curNote.parentId
+			}
+		];
+
+		syncFeed.current = newFeed;
+
+		newFeed = newFeed.map((n) => {
+
+			if (n.sort > curNote.sort  && n.parentId == curNote.parentId && n.id != newId) {
+				return {
+					...n,
+					sort: n.sort + 1
 				}
+			} else {
+				return n;
+			}
 
-			});
+		});
 
-			const newId = crypto.randomUUID();
+		newFeed.sort((a,b) => a.sort - b.sort);
 
-			newFeed = [
-				...newFeed,
-				{
-					id: newId,
-					title: "",
-					sort: curNote.sort + 1,
-					//position: insertAt,
-					isNew: true,
-					parentId: curNote.parentId
-				}
-			];
+		setIsEditTitle(true)
 
-			syncFeed.current = newFeed;
+		prevCursorPosition.current = cursorPosition;
 
-			newFeed = newFeed.map((n) => {
+		setCursorPosition(cursorPosition + 1)
 
-				if (n.sort > curNote.sort  && n.parentId == curNote.parentId && n.id != newId) {
-					return {
-						...n,
-						sort: n.sort + 1
-					}
-				} else {
-					return n;
-				}
+		// TODO вызывать функцию добавления заметки
 
-			});
+		savedUpdatedIds.current = updatedIds.current;
 
-			newFeed.sort((a,b) => a.sort - b.sort);
+		updatedIds.current = [];
 
-			setIsEditTitle(true)
+		setIsAdding(true);
 
-			prevCursorPosition.current = cursorPosition;
-
-			setCursorPosition(cursorPosition + 1)
-
-		} else {
-			syncFeed.current = newFeed;
-		}
-
-		updateTimeout = setTimeout(function () {
-
-			setIsChanged(true);
-
-			savedUpdatedIds.current = updatedIds.current;
-
-			updatedIds.current = [];
-
-		}, 1000);
-
-
+		addNote(syncFeed.current, curNote.id, savedUpdatedIds.current).then(() => {
+			setIsAdding(false);
+		});
 
 		setNotesFeed(newFeed);
+
 
 	}
 
@@ -1055,7 +1118,8 @@ const NotesList: React.FC<Props> = (props) => {
 	return (
 		<div className="row">
 			<div className={`col ${styles.notes_list_col_1}`}>
-				{/*<div>{isUpdating ? "true" : "false"}</div>*/}
+				<div>{isAdding ? "true" : "false"}</div>
+				{/*<div>{isMacOs ? "true" : "false"}</div>*/}
 
 				{!notesFeed.length && (
 					<div className="new-note-hint">
@@ -1064,8 +1128,6 @@ const NotesList: React.FC<Props> = (props) => {
 				)}
 
 				<div className={styles.notes_list}>
-
-
 
 					<NotesProvider feed={notesFeed}>
 
@@ -1102,7 +1164,7 @@ const NotesList: React.FC<Props> = (props) => {
 											focusId.current = curId;
 										}}
 										onEdit={handleEdit}
-										onAdd={handleEdit}
+										onAdd={handleAdd}
 										onDelete={handleDelete}
 										isNew={note.isNew}
 									/>
@@ -1129,7 +1191,7 @@ const NotesList: React.FC<Props> = (props) => {
 						</div>
 						<div className={styles.hints_item}>
 							<div className={styles.hints_item_key}>
-								<div className={styles.key}>Alt + Enter</div>
+								<div className={styles.key}>{altKeyText} + Enter</div>
 							</div>
 							<div className={styles.hints_item_descr}>
 								Add above
@@ -1177,7 +1239,7 @@ const NotesList: React.FC<Props> = (props) => {
 						</div>
 						<div className={styles.hints_item}>
 							<div className={styles.hints_item_key}>
-								<div className={styles.key}>Ctrl + →</div>
+								<div className={styles.key}>{controlKeyText} + →</div>
 							</div>
 							<div className={styles.hints_item_descr}>
 								Indent
@@ -1185,7 +1247,7 @@ const NotesList: React.FC<Props> = (props) => {
 						</div>
 						<div className={styles.hints_item}>
 							<div className={styles.hints_item_key}>
-								<div className={styles.key}>Ctrl + ←</div>
+								<div className={styles.key}>{controlKeyText} + ←</div>
 							</div>
 							<div className={styles.hints_item_descr}>
 								Outdent
@@ -1193,8 +1255,8 @@ const NotesList: React.FC<Props> = (props) => {
 						</div>
 						<div className={styles.hints_item}>
 							<div className={styles.hints_item_key}>
-								<div className={styles.key}>Ctrl + ↑</div>
-								<div className={styles.key}>Ctrl + ↓</div>
+								<div className={styles.key}>{controlKeyText} + ↑</div>
+								<div className={styles.key}>{controlKeyText} + ↓</div>
 							</div>
 							<div className={styles.hints_item_descr}>
 								Reorder notes
@@ -1213,7 +1275,7 @@ const NotesList: React.FC<Props> = (props) => {
 						</div>
 						<div className={styles.hints_item}>
 							<div className={styles.hints_item_key}>
-								<div className={styles.key}>Del</div>
+								<div className={styles.key}>{deleteText}</div>
 							</div>
 							<div className={styles.hints_item_descr}>
 								Delete
