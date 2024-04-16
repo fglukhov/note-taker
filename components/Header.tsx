@@ -14,14 +14,16 @@ const Header: React.FC = () => {
 	let left = (
 		<div className="left">
 			<Link href="/">
-				<a className="bold" data-active={isActive('/')}>
-					Note taker
+				<a className="header-logo" data-active={isActive('/')}>
+					Great plan
 				</a>
 			</Link>
 			<style jsx>{`
-        .bold {
-          font-weight: bold;
-        }
+				.header-logo {
+					font-weight: bold;
+					font-size: 150%;
+					color: #000 !important;
+				}
 
         a {
           text-decoration: none;
@@ -46,14 +48,16 @@ const Header: React.FC = () => {
 		left = (
 			<div className="left">
 				<Link href="/">
-					<a className="bold" data-active={isActive('/')}>
-						Note taker
+					<a className="header-logo" data-active={isActive('/')}>
+						Great plan
 					</a>
 				</Link>
 				<style jsx>{`
-          .bold {
-            font-weight: bold;
-          }
+					.header-logo {
+						font-weight: bold;
+						font-size: 150%;
+						color: #000 !important;
+					}
 
           a {
             text-decoration: none;
@@ -118,16 +122,16 @@ const Header: React.FC = () => {
 		left = (
 			<div className="left">
 				<Link href="/">
-					<a className="bold" data-active={isActive('/')}>
-						Note taker
+					<a className="header-logo" data-active={isActive('/')}>
+						Great plan
 					</a>
 				</Link>
-				<Link href="/">
-					<a data-active={isActive('/')}>Notes</a>
-				</Link>
+
 				<style jsx>{`
-          .bold {
-            font-weight: bold;
+          .header-logo {
+						font-weight: bold;
+						font-size: 150%;
+						color: #000 !important;
           }
 
           a {

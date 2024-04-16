@@ -8,6 +8,9 @@ import {createClient} from "@supabase/supabase-js";
 
 import {getSession} from "next-auth/react";
 
+import Head from "next/head";
+import Header from "../components/Header";
+
 // index.tsx test
 export const getServerSideProps: GetServerSideProps = async (context) => {
 
@@ -47,23 +50,25 @@ type Props = {
 const Main: React.FC<Props> = (props) => {
 
   return (
-    <Layout>
-      <div className="page">
-        <main>
-					{props.session && (
-						<div>
-							<h1>Notes</h1>
+		<>
+			<Head>
+				<title>Great plan</title>
+			</Head>
+			<Layout>
+				<div className="page">
+					<main>
+						{props.session && (
+							<div>
+								{/*<h1>Notes</h1>*/}
 
+								<NotesList feed={props.feed}/>
 
-							<NotesList feed={props.feed}/>
-
-
-
-						</div>
-					)}
-        </main>
-      </div>
-    </Layout>
+							</div>
+						)}
+					</main>
+				</div>
+			</Layout>
+		</>
   )
 }
 
