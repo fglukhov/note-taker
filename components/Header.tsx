@@ -19,9 +19,11 @@ const Header: React.FC = () => {
 				</a>
 			</Link>
 			<style jsx>{`
-        .bold {
-          font-weight: bold;
-        }
+				.header-logo {
+					font-weight: bold;
+					font-size: 150%;
+					color: #000 !important;
+				}
 
         a {
           text-decoration: none;
@@ -51,9 +53,11 @@ const Header: React.FC = () => {
 					</a>
 				</Link>
 				<style jsx>{`
-          .bold {
-            font-weight: bold;
-          }
+					.header-logo {
+						font-weight: bold;
+						font-size: 150%;
+						color: #000 !important;
+					}
 
           a {
             text-decoration: none;
@@ -122,9 +126,7 @@ const Header: React.FC = () => {
 						Great plan
 					</a>
 				</Link>
-				<Link href="/"  data-active={isActive('/')}>
-					Notes
-				</Link>
+
 				<style jsx>{`
           .header-logo {
 						font-weight: bold;
