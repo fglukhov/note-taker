@@ -15,15 +15,15 @@ const Header: React.FC = () => {
 		<div className="left">
 			<Link
 				href="/"
-				className="bold"
+				className="logo"
 				data-active={isActive('/')}>
-					Note taker
+					Great Plan
 			</Link>
 			<style jsx>{`
         .bold {
           font-weight: bold;
         }
-
+        
         a {
           text-decoration: none;
           color: var(--geist-foreground);
@@ -37,6 +37,7 @@ const Header: React.FC = () => {
         a + a {
           margin-left: 1rem;
         }
+        
       `}</style>
 		</div>
 	);
@@ -48,10 +49,10 @@ const Header: React.FC = () => {
 			<div className="left">
 				<Link
 					href="/"
-					className="bold"
+					className="logo"
 					data-active={isActive('/')}
 				>
-						Note taker
+						Great Plan
 				</Link>
 				<style jsx>{`
           .bold {
@@ -71,6 +72,8 @@ const Header: React.FC = () => {
           a + a {
             margin-left: 1rem;
           }
+          
+
         `}</style>
 			</div>
 		);
@@ -89,7 +92,7 @@ const Header: React.FC = () => {
 	if (!session) {
 		right = (
 			<div className="right">
-				<Link href="/api/auth/signin"  data-active={isActive('/signup')}>
+				<Link href="/api/auth/signin" className="login-button" data-active={isActive('/signup')}>
 					Log in
 				</Link>
 				<style jsx>{`
@@ -112,6 +115,9 @@ const Header: React.FC = () => {
             padding: 0.5rem 1rem;
             border-radius: 3px;
           }
+          
+
+          
         `}</style>
 			</div>
 		);
@@ -120,12 +126,12 @@ const Header: React.FC = () => {
 	if (session) {
 		left = (
 			<div className="left">
-				<Link href="/"  className="bold" data-active={isActive('/')}>
-						Note taker
+				<Link href="/" className="logo" data-active={isActive('/')}>
+					Great Plan
 				</Link>
-				<Link href="/"  data-active={isActive('/')}>
-					Notes
-				</Link>
+				{/*<Link href="/"  data-active={isActive('/')}>*/}
+				{/*	Notes*/}
+				{/*</Link>*/}
 				<style jsx>{`
           .bold {
             font-weight: bold;
@@ -144,6 +150,9 @@ const Header: React.FC = () => {
           a + a {
             margin-left: 1rem;
           }
+          
+
+          
         `}</style>
 			</div>
 		);
@@ -166,7 +175,7 @@ const Header: React.FC = () => {
             color: var(--geist-foreground);
             display: inline-block;
           }
-
+          
           p {
             display: inline-block;
             font-size: 13px;
@@ -189,7 +198,12 @@ const Header: React.FC = () => {
 
           button {
             border: none;
+            background: #fff;
+            border-radius: 3px;
           }
+          
+
+          
         `}</style>
 			</div>
 		);
