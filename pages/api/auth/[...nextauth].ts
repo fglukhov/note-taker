@@ -19,7 +19,6 @@ export const authOptions = {
 	callbacks: {
 		async session({ session, user }) {
 			if (session?.user) {
-				// @ts-expect-error: расширяем объект user
 				session.user.id = user.id;
 			}
 			return session;
