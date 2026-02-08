@@ -2,7 +2,7 @@
 
 import prisma from "../../../../lib/prisma";
 import { getServerSession } from "next-auth/next";
-import { authOptions } from "../auth/[...nextauth]";
+import { authOptions } from "../../auth/[...nextauth]";
 
 // DELETE /api/post/:id
 export default async function handle(req, res) {
