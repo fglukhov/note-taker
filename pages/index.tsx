@@ -1,8 +1,8 @@
 import React, {ReactNode, useState} from "react"
-import { GetServerSideProps } from "next"
+import {GetServerSideProps} from "next"
 import Layout from "../components/Layout"
 import NotesList, {getFamily} from "../components/NotesList"
-import { NotesListItemProps } from "../components/NotesListItem"
+import {NotesListItemProps} from "../components/NotesListItem"
 import prisma from '../lib/prisma';
 import {getSession} from "next-auth/react";
 import {NotesProvider} from "../components/NotesContext";
@@ -26,12 +26,10 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
 			}
 		});
 
-
-
 	}
 
 	return {
-		props: { feed, session }
+		props: {feed, session}
 	};
 
 };
@@ -43,10 +41,10 @@ type Props = {
 
 const Main: React.FC<Props> = (props) => {
 
-  return (
-    <Layout>
-      <div className="page">
-        <main>
+	return (
+		<Layout>
+			<div className="page">
+				<main>
 					{props.session && (
 						<div>
 							<h1>Notes</h1>
@@ -55,13 +53,12 @@ const Main: React.FC<Props> = (props) => {
 							<NotesList feed={props.feed}/>
 
 
-
 						</div>
 					)}
-        </main>
-      </div>
-    </Layout>
-  )
+				</main>
+			</div>
+		</Layout>
+	)
 }
 
 export default Main
