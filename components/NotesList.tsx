@@ -1,12 +1,14 @@
-import React, {useState, useEffect, useRef, useContext} from "react";
-import {NotesContext, useNotes} from "./NotesContext";
-//import { useImmer } from 'use-immer';
+import React, {useState, useEffect, useRef} from "react";
 import NotesListItem from "./NotesListItem";
 import {NotesProvider} from "./NotesContext";
 import {NotesListItemProps} from "./NotesListItem";
 import {useKeyPress} from '../lib/useKeyPress';
 import styles from './NotesList.module.scss'
 import Router from "next/router";
+
+// TODO привести в порядок типы
+// TODO обновление страницы по cmd+R
+// TODO запоминаем текущую позицию при обновлении и скроллим к ней
 
 type Props = {
 	feed: NotesListItemProps[]
@@ -18,7 +20,8 @@ let timeout = null;
 
 const NotesList: React.FC<Props> = (props) => {
 
-	const savedReorderCallback = useRef(null);
+	const reorderTimeoutRef = useRef<number | null>(null);
+
 	const updatedIds = useRef([]);
 	const savedUpdatedIds = useRef([]);
 
@@ -43,6 +46,11 @@ const NotesList: React.FC<Props> = (props) => {
 	const [isUpdating, setIsUpdating] = useState(false);
 	const [isChanged, setIsChanged] = useState(false);
 
+	const isChangedRef = useRef(isChanged);
+
+
+	const hiddenRangesRef = useRef<{start:number; end:number}[]>([]);
+
 
 
 	function reorderCallback() {
@@ -56,29 +64,51 @@ const NotesList: React.FC<Props> = (props) => {
 			setIsChanged(false);
 			setIsUpdating(true);
 
-			reorderNotes(prevFeed.current, syncFeed.current, savedUpdatedIds.current).then(() => {
-				setIsUpdating(false);
-			});
+			reorderNotes(prevFeed.current, syncFeed.current, savedUpdatedIds.current)
+				.then(() => {
+					setIsUpdating(false);
+
+					// если пока отправляли — появились новые изменения, отправим ещё раз
+					if (isChangedRef.current) {
+						reorderCallback();
+					}
+				})
+				.catch((err) => {
+					console.error(err);
+
+					setIsUpdating(false);
+
+					// можно тоже повторить попытку, если во время ошибки были изменения
+					if (isChangedRef.current) {
+						reorderCallback();
+					}
+				});
+
 
 		}
 
 	}
 
 	useEffect(() => {
-		savedReorderCallback.current = reorderCallback;
-	});
+		if (!isChanged) return;
 
-	useEffect(() => {
-
-		function tick() {
-			savedReorderCallback.current();
+		// если пользователь продолжает что-то делать — сбрасываем таймер
+		if (reorderTimeoutRef.current) {
+			clearTimeout(reorderTimeoutRef.current);
 		}
 
-		let reorderInterval = setInterval(tick, 1000);
+		reorderTimeoutRef.current = window.setTimeout(() => {
+			reorderCallback();
+			reorderTimeoutRef.current = null;
+		}, 800);
+	}, [isChanged, notesFeed]);
 
-		return () => clearInterval(reorderInterval);
+	useEffect(() => {
+		isChangedRef.current = isChanged;
+	}, [isChanged]);
 
-	},[]);
+
+
 
 	const onKeyPress = (event) => {
 
@@ -114,40 +144,10 @@ const NotesList: React.FC<Props> = (props) => {
 
 				let curNote = notesFeed.find(n => n.id==focusId.current);
 
-				let parentFamily = getFamily(curNote.parentId, notesFeed);
-
 				// @ts-ignore
 				let curNoteFamily = getFamily(curNote.id, notesFeed);
 
-				let parentId = curNote.parentId;
-
-				// const navIds = [];
-				//
-				// notesFeed.map(n => {
-				//
-				// 	if (n.parentId == parentId) {
-				// 		navIds.push(n.id)
-				// 	}
-				//
-				// });
-
-				let prevNavId = null;
-
-				notesFeed.map((n) => {
-
-					if (n.position == cursorPosition - 1 && cursorPosition > 0) {
-
-						prevNavId = n.id;
-
-					}
-
-				});
-
-
 				// TODO искать не соседей одного уровня, а все заметки по position
-
-				let prevNav = notesFeed.find(n => n.id==prevNavId);
-
 
 				let positionShift = 0;
 
@@ -173,14 +173,22 @@ const NotesList: React.FC<Props> = (props) => {
 				if (eventKeyRef.current === "ArrowUp" && cursorPosition > 0) {
 
 
-					setCursorPosition(cursorPosition - 1);
-					saveCursorPosition.current = cursorPosition - 1;
+					let nextPos = cursorPosition - 1;
+
+					// если попали внутрь любого скрытого диапазона — прыгаем на его начало
+					for (const range of hiddenRangesRef.current) {
+						if (nextPos > range.start && nextPos <= range.end) {
+							nextPos = range.start;
+							break;
+						}
+					}
+
+					setCursorPosition(nextPos);
+					saveCursorPosition.current = nextPos;
 
 					let navNote = notesFeed.find(n => n.id == focusId.current);
 
 					// TODO определить, есть ли у navNote свернутый родитель и посчитать размер его семьи
-
-					let isCollapsedParent = false;
 
 					let navParentId = navNote.parentId;
 
@@ -201,7 +209,7 @@ const NotesList: React.FC<Props> = (props) => {
 
 					let navParentsReverted = navParents.reverse();
 
-					for (var i = 0; i < navParentsReverted.length; i++) {
+					for (let i = 0; i < navParentsReverted.length; i++) {
 						if (navParentsReverted[i].collapsed) {
 							positionShift = getFamily(navParentsReverted[i].id, notesFeed).length;
 							break;
@@ -295,7 +303,7 @@ const NotesList: React.FC<Props> = (props) => {
 
 				if (curNote.sort > 0 && prevSiblingId !== null) {
 
-					const newFeed = notesFeed.map((n, i) => {
+					const newFeed = notesFeed.map((n) => {
 						if (n.id === curNote.id) {
 
 							if (!updatedIds.current.includes(n.id)) updatedIds.current.push(n.id)
@@ -381,7 +389,7 @@ const NotesList: React.FC<Props> = (props) => {
 
 					let newSort = curParent.sort + 1;
 
-					let newFeed = notesFeed.map((n, i) => {
+					let newFeed = notesFeed.map((n) => {
 						if (n.id === curNote.id) {
 
 							if (!updatedIds.current.includes(n.id)) updatedIds.current.push(n.id)
@@ -415,8 +423,6 @@ const NotesList: React.FC<Props> = (props) => {
 					});
 
 					newFeed.sort((a,b) => a.sort - b.sort);
-
-					let newCursorPosition = null;
 
 					updateTimeout = setTimeout(function () {
 
@@ -459,7 +465,7 @@ const NotesList: React.FC<Props> = (props) => {
 
 				let curNote = notesFeed.find(n => n.id==focusId.current);
 
-				let newFeed = notesFeed.map((n, i) => {
+				let newFeed = notesFeed.map((n) => {
 					if (n.id === curNote.id) {
 
 						if (!updatedIds.current.includes(n.id)) updatedIds.current.push(n.id)
@@ -508,7 +514,6 @@ const NotesList: React.FC<Props> = (props) => {
 				let sortShift = 0;
 
 				let curNote = notesFeed.find(n => n.id==focusId.current);
-				let parentId = curNote.parentId;
 
 				let curNoteSiblings = notesFeed.filter(n => n.parentId === curNote.parentId);
 
@@ -977,8 +982,6 @@ const NotesList: React.FC<Props> = (props) => {
 
 		let curNote = notesFeed.find(n => n.id==focusId.current);
 
-		const currentSort = notesFeed.find(n => n.id == curNote.id).sort;
-
 		// @ts-ignore
 		let removedFeed = removeFamily(curNote.id, notesFeed);
 
@@ -1047,8 +1050,17 @@ const NotesList: React.FC<Props> = (props) => {
 
 	}
 
+	const registerCollapsedRange = (start:number, familyCount:number, collapsed?:boolean) => {
+		if (collapsed) {
+			hiddenRangesRef.current.push({ start, end: start + familyCount - 1 });
+		}
+	};
+
+
 	let position = 0;
 	let familyCount = 0;
+
+	hiddenRangesRef.current = [];
 
 	return (
 		<div className="row">
@@ -1075,7 +1087,7 @@ const NotesList: React.FC<Props> = (props) => {
 									position += familyCount;
 								}
 
-								note.position = position;
+								//note.position = position;
 
 								familyCount = getFamily(note.id, notesFeed).length;
 
@@ -1092,8 +1104,10 @@ const NotesList: React.FC<Props> = (props) => {
 										collapsed={note.collapsed}
 										parentId={note.parentId}
 										cursorPosition={cursorPosition}
-										isFocus={note.position === cursorPosition}
-										isEdit={note.position === cursorPosition && isEditTitle}
+										// isFocus={note.position === cursorPosition}
+										// isEdit={note.position === cursorPosition && isEditTitle}
+										isFocus={position === cursorPosition}
+										isEdit={position === cursorPosition && isEditTitle}
 										isEditTitle={isEditTitle}
 										onCancel={handleCancel}
 										onFocus={(curId) => {
@@ -1103,6 +1117,7 @@ const NotesList: React.FC<Props> = (props) => {
 										onAdd={handleEdit}
 										onDelete={handleDelete}
 										isNew={note.isNew}
+										registerCollapsedRange={registerCollapsedRange}
 									/>
 								)
 
@@ -1250,30 +1265,51 @@ export const removeFamily =
 				)
 	}
 
+const buildChildrenIndex = (feed: NotesListItemProps[]) => {
+	const childrenByParentId: Record<string, NotesListItemProps[]> = {};
 
-export const getFamily = (id: String, feed: NotesListItemProps[]) => {
+	for (const n of feed) {
+		const pid = (n.parentId ?? "root") as string;
+		if (!childrenByParentId[pid]) childrenByParentId[pid] = [];
+		childrenByParentId[pid].push(n);
+	}
 
-	let familyFeed = []
+	// порядок детей по sort, чтобы было стабильно
+	for (const pid in childrenByParentId) {
+		childrenByParentId[pid].sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0));
+	}
 
-	// @ts-ignore
-	let noFamilyFeed = removeFamily(id, feed);
+	return childrenByParentId;
+};
 
-	let remainingIds = noFamilyFeed.map(n => (n.id));
 
-	let allIds = feed.map(n => (n.id));
+export const getFamily = (id: string, feed: NotesListItemProps[]) => {
+	const childrenByParentId = buildChildrenIndex(feed);
 
-	let familyIds = [];
+	const self = feed.find(n => n.id === id);
+	if (!self) return [];
 
-	allIds.map((id) => {
-		if (!remainingIds.includes(id)) {
-			familyIds.push(id);
+	const result: NotesListItemProps[] = [self];
+	const stack: string[] = [id];
+	const visited = new Set<string>(); // защита от циклов
+
+	while (stack.length) {
+		const curId = stack.pop()!;
+		if (visited.has(curId)) continue;
+		visited.add(curId);
+
+		const children = childrenByParentId[curId] ?? [];
+		for (const ch of children) {
+			result.push(ch);
+			stack.push(ch.id);
 		}
-	});
+	}
 
-	familyFeed = feed.filter(n => familyIds.includes(n.id));
+	return result;
+};
 
-	return familyFeed;
 
-}
+
+
 
 export default NotesList;

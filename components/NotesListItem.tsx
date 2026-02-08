@@ -6,8 +6,6 @@ import {useNotes} from "./NotesContext";
 
 import FeatherIcon from 'feather-icons-react';
 
-
-
 export type NotesListItemProps = {
 	id: string;
 	title: string;
@@ -31,6 +29,7 @@ export type NotesListItemProps = {
 	parentId?: string;
 	complete?: boolean;
 	collapsed?: boolean;
+	registerCollapsedRange?: (start:number, familyCount:number, collapsed?:boolean) => void;
 }
 
 const NotesListItem: React.FC<NotesListItemProps> = (props) => {
@@ -47,11 +46,6 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
 	const eventKeyRef = useRef(null);
 
 	const notesFeed = useNotes()
-
-	const elementRef = useRef<HTMLDivElement>(null);
-	// const isOnScreen = useOnScreen(elementRef);
-	//
-	// console.log(elementRef.current)
 
 	const onElementRef = (node) => {
 		if (node && props.isFocus) {
@@ -140,6 +134,9 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
 
 	let position = props.position + 1;
 	let familyCount = 0;
+
+	props.registerCollapsedRange?.(props.position, props.familyCount ?? 1, props.collapsed);
+
 
 	//console.log(props)
 
@@ -249,6 +246,7 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
 							onAdd={props.onAdd}
 							onDelete={props.onDelete}
 							isNew={childNote.isNew}
+							registerCollapsedRange={props.registerCollapsedRange}
 						/>
 					)
 
