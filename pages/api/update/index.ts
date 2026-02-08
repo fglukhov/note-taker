@@ -18,7 +18,9 @@ export default async function handle(req, res) {
 		const session = await getServerSession(req, res, authOptions);
 
 		if (!session?.user?.email) {
-			return res.status(401).json({ error: 'Unauthorized' });
+			return res.status(401).json({
+				error: 'Guest mode — saving disabled'
+			});
 		}
 
 		const user = await prisma.user.findUnique({
