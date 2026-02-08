@@ -4,7 +4,7 @@ import {getFamily} from "./NotesList";
 import styles from './NotesListItem.module.scss'
 import {useNotes} from "./NotesContext";
 
-import FeatherIcon from 'feather-icons-react';
+import { ChevronDown } from 'react-feather';
 
 export type NotesListItemProps = {
 	id: string;
@@ -157,7 +157,7 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
 						<div className={styles.notes_list_item_title}>
 							{/*<span style={{color: "red", fontSize: "12px",}}>{props.position + ": "}</span>*/}
 							{props.familyCount > 1 &&
-								<div className={styles.notes_list_item_arrow}><FeatherIcon icon="chevron-down"/></div>}
+								<div className={styles.notes_list_item_arrow}><ChevronDown size={24} /></div>}
 							{title}
 						</div>
 					</>
