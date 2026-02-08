@@ -1,6 +1,6 @@
 import prisma from "../../../lib/prisma";
 import { getServerSession } from "next-auth/next";
-import { authOptions } from "./auth/[...nextauth]"; // ⚠️ если файл лежит в pages/api/*, путь подправь
+import { authOptions } from "../auth/[...nextauth]"; // ⚠️ если файл лежит в pages/api/*, путь подправь
 
 export default async function handle(req, res) {
 	try {
