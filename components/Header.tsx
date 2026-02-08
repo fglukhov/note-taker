@@ -13,11 +13,10 @@ const Header: React.FC = () => {
 
 	let left = (
 		<div className="left">
-			<Link
-				href="/"
-				className="bold"
-				data-active={isActive('/')}>
-					Note taker
+			<Link href="/">
+				<a className="header-logo" data-active={isActive('/')}>
+					Great plan
+				</a>
 			</Link>
 			<style jsx>{`
         .bold {
@@ -46,12 +45,10 @@ const Header: React.FC = () => {
 	if (status === 'loading') {
 		left = (
 			<div className="left">
-				<Link
-					href="/"
-					className="bold"
-					data-active={isActive('/')}
-				>
-						Note taker
+				<Link href="/">
+					<a className="header-logo" data-active={isActive('/')}>
+						Great plan
+					</a>
 				</Link>
 				<style jsx>{`
           .bold {
@@ -89,8 +86,8 @@ const Header: React.FC = () => {
 	if (!session) {
 		right = (
 			<div className="right">
-				<Link href="/api/auth/signin"  data-active={isActive('/signup')}>
-					Log in
+				<Link href="/api/auth/signin">
+					<a data-active={isActive('/signup')}>Log in</a>
 				</Link>
 				<style jsx>{`
           a {
@@ -120,15 +117,19 @@ const Header: React.FC = () => {
 	if (session) {
 		left = (
 			<div className="left">
-				<Link href="/"  className="bold" data-active={isActive('/')}>
-						Note taker
+				<Link href="/">
+					<a className="header-logo" data-active={isActive('/')}>
+						Great plan
+					</a>
 				</Link>
 				<Link href="/"  data-active={isActive('/')}>
 					Notes
 				</Link>
 				<style jsx>{`
-          .bold {
-            font-weight: bold;
+          .header-logo {
+						font-weight: bold;
+						font-size: 150%;
+						color: #000 !important;
           }
 
           a {

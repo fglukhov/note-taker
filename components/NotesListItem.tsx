@@ -21,6 +21,7 @@ export type NotesListItemProps = {
 	isNew?: boolean;
 	children?: ReactNode;
 	onFocus?: (id) => any;
+	onClick?: (position) => any;
 	onCancel?: (isNewParam, noteId, parentId, sort) => any;
 	onEdit?: (noteId, title) => any;
 	onAdd?: (noteId, title) => any;
@@ -149,13 +150,13 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
 		>
 			{/*<div>"collapsed: " + {props.collapsed && "true"}</div>*/}
 			{/*<div>"children: " + {props.familyCount > 1 && "true"}</div>*/}
-			<div className={styles.notes_list_item_title_wrapper} ref={onElementRef}>
+			<div className={styles.notes_list_item_title_wrapper} ref={onElementRef} onClick={() => props.onClick(props.position)}>
 				{/*<div>Is in viewport: {isOnScreen ? 'true' : 'false'}</div>*/}
 				{!(props.isEdit && props.isFocus) ? (
 					<>
 						{/*<div style={{color: "red", fontSize: "12px", paddingBottom: "3px"}}>{props.sort}</div>*/}
 						<div className={styles.notes_list_item_title}>
-							{/*<span style={{color: "red", fontSize: "12px",}}>{props.position + ": "}</span>*/}
+							{/*<span style={{color: "red", fontSize: "12px",}}>{props.sort + ": "}</span>*/}
 							{props.familyCount > 1 &&
 								<div className={styles.notes_list_item_arrow}><FeatherIcon icon="chevron-down"/></div>}
 							{title}
@@ -241,6 +242,7 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
 							isEdit={(position === props.cursorPosition && props.isEditTitle)}
 							isEditTitle={props.isEditTitle}
 							onFocus={props.onFocus}
+							onClick={props.onClick}
 							onCancel={props.onCancel}
 							onEdit={props.onEdit}
 							onAdd={props.onAdd}

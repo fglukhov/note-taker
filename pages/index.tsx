@@ -1,5 +1,5 @@
 import React, {ReactNode, useState} from "react"
-import {GetServerSideProps} from "next"
+import { GetServerSideProps } from "next"
 import Layout from "../components/Layout"
 import NotesList, {getFamily} from "../components/NotesList"
 import {NotesListItemProps} from "../components/NotesListItem"

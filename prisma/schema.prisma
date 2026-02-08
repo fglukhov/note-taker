@@ -24,7 +24,7 @@ model Post {
 
 model Note {
   id        String   @id @default(cuid())
-  title     String
+  title     String   @default(" ")
   content   String?
   author    User?    @relation(fields: [authorId], references: [id])
   authorId  String?
@@ -32,7 +32,7 @@ model Note {
   sort      Int      @default(1)
   parentId  String?
   complete  Boolean  @default(false)
-  collapsed  Boolean  @default(false)
+  collapsed Boolean  @default(false)
 }
 
 model Account {
