@@ -1,9 +1,19 @@
-import { createContext, useContext, useReducer } from 'react';
+import React, { createContext, useContext } from 'react';
 
-export const NotesContext = createContext(null);
+export type NoteFeedItem = {
+	id: string;
+	title: string;
+	sort?: number;
+	parentId?: string;
+	complete?: boolean;
+	collapsed?: boolean;
+	isNew?: boolean;
+};
+
+export const NotesContext = createContext<NoteFeedItem[] | null>(null);
 // export const NotesDispatchContext = createContext(null);
 //
-export function NotesProvider({ feed, children }) {
+export function NotesProvider({ feed, children }: { feed: NoteFeedItem[]; children: React.ReactNode }) {
 	// const [tasks, dispatch] = useReducer(
 	// 	notesReducer,
 	// 	feed
@@ -16,7 +26,7 @@ export function NotesProvider({ feed, children }) {
 	);
 }
 //
-export function useNotes() {
+export function useNotes(): NoteFeedItem[] | null {
 	return useContext(NotesContext);
 }
 //

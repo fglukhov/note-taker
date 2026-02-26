@@ -14,28 +14,28 @@ type Props = {
 	feed: NotesListItemProps[]
 }
 
-let updateTimeout = null;
+let updateTimeout: ReturnType<typeof setTimeout> | null = null;
 //let reorderInterval = null;
-let timeout = null;
+let timeout: ReturnType<typeof setTimeout> | null = null;
 
 const NotesList: React.FC<Props> = (props) => {
 
 	const reorderTimeoutRef = useRef<number | null>(null);
 
-	const updatedIds = useRef([]);
-	const savedUpdatedIds = useRef([]);
+	const updatedIds = useRef<string[]>([]);
+	const savedUpdatedIds = useRef<string[]>([]);
 
 	const prevFeed = useRef(props.feed);
-	const syncFeed = useRef(null);
+	const syncFeed = useRef<NotesListItemProps[] | null>(null);
 
-	const eventKeyRef = useRef(null);
-	const lastKeyRef = useRef(null);
-	const focusId = useRef(null);
-	const prevFocusId = useRef(null);
+	const eventKeyRef = useRef<string | null>(null);
+	const lastKeyRef = useRef<string | null>(null);
+	const focusId = useRef<string | null>(null);
+	const prevFocusId = useRef<string | null>(null);
 
-	const prevCursorPosition = useRef(null);
-	const saveCursorPosition = useRef(null);
-	const prevTitle = useRef(null);
+	const prevCursorPosition = useRef<number | null>(null);
+	const saveCursorPosition = useRef<number | null>(null);
+	const prevTitle = useRef<string | null>(null);
 
 	const [cursorPosition, setCursorPosition] = useState(0);
 	const [notesFeed, setNotesFeed] = useState(props.feed);
@@ -73,7 +73,7 @@ const NotesList: React.FC<Props> = (props) => {
 						reorderCallback();
 					}
 				})
-				.catch((err) => {
+				.catch((err: unknown) => {
 					console.error(err);
 
 					setIsUpdating(false);
@@ -110,11 +110,7 @@ const NotesList: React.FC<Props> = (props) => {
 
 
 
-	const onKeyPress = (event) => {
-
-		if ((event.ctrlKey || event.metaKey) && !isEditTitle) {
-			event.preventDefault();
-		}
+	const onKeyPress = (event: KeyboardEvent): void => {
 
 		let isCtrlCommand = event.ctrlKey || event.metaKey;
 
@@ -257,6 +253,8 @@ const NotesList: React.FC<Props> = (props) => {
 
 			if (eventKeyRef.current == "ArrowRight" && isCtrlCommand && !isEditTitle) {
 
+				event.preventDefault();
+
 				if (updateTimeout) {
 					clearTimeout(updateTimeout);
 				}
@@ -362,6 +360,8 @@ const NotesList: React.FC<Props> = (props) => {
 
 			if (eventKeyRef.current == "ArrowLeft" && isCtrlCommand && !isEditTitle) {
 
+				event.preventDefault();
+
 				if (updateTimeout) {
 					clearTimeout(updateTimeout);
 				}
@@ -453,6 +453,8 @@ const NotesList: React.FC<Props> = (props) => {
 
 			if ((eventKeyRef.current == "ArrowRight" || eventKeyRef.current == "ArrowLeft") && !isCtrlCommand && !isEditTitle) {
 
+				event.preventDefault();
+
 				let collapsed = false;
 
 				if (eventKeyRef.current == "ArrowLeft") {
@@ -505,7 +507,7 @@ const NotesList: React.FC<Props> = (props) => {
 
 			if ((eventKeyRef.current == "ArrowUp" || eventKeyRef.current == "ArrowDown") && isCtrlCommand && !isEditTitle) {
 
-
+				event.preventDefault();
 
 				if (updateTimeout) {
 					clearTimeout(updateTimeout);
@@ -678,7 +680,7 @@ const NotesList: React.FC<Props> = (props) => {
 	useKeyPress([], onKeyPress);
 
 
-	const insertNote = (event) => {
+	const insertNote = (event: KeyboardEvent | { shiftKey: boolean; altKey: boolean } | null): void => {
 
 		if (event == null) {
 
@@ -821,7 +823,7 @@ const NotesList: React.FC<Props> = (props) => {
 
 
 	// TODO feed and updatedIds are parameters
-	const reorderNotes = async (prevFeed, feed, ids) => {
+	const reorderNotes = async (prevFeed: NotesListItemProps[], feed: NotesListItemProps[] | null, ids: string[]): Promise<void> => {
 
 		const body = { prevFeed, feed, ids };
 
@@ -840,7 +842,7 @@ const NotesList: React.FC<Props> = (props) => {
 
 	
 
-	const handleEdit = (noteId, title) => {
+	const handleEdit = (noteId: string, title: string): void => {
 
 		if (updateTimeout) {
 			clearTimeout(updateTimeout);
@@ -936,7 +938,7 @@ const NotesList: React.FC<Props> = (props) => {
 
 	}
 
-	const handleCancel = (isNewParam, noteId, parentId, sort) => {
+	const handleCancel = (isNewParam: boolean, noteId: string, parentId: string | undefined, sort: number | undefined): void => {
 
 		setIsEditTitle(false);
 
@@ -1240,30 +1242,21 @@ const NotesList: React.FC<Props> = (props) => {
 	);
 };
 
-export const removeFamily =
-	(id,
-	 [node, ...more] = [],
-	 s = new Set([id]),
-	 r = []
-	) => {
-		if (node === undefined)
-			return r               // 1
-		else if (s.has(node.id) || s.has(node.parentId)) {
-			return removeFamily    // 2
-				(id,
-					// @ts-ignore
-					[...r, ...more],
-					s.add(node.id),
-					[]
-				)
-		} else
-			return removeFamily    // 3
-				(id,
-					more,
-					s,
-					[...r, node]
-				)
+export const removeFamily = (
+	id: string,
+	[node, ...more]: NotesListItemProps[] = [],
+	s: Set<string> = new Set([id]),
+	r: NotesListItemProps[] = []
+): NotesListItemProps[] => {
+	if (node === undefined)
+		return r;
+	const nextSet = new Set(s);
+	nextSet.add(node.id);
+	if (s.has(node.id) || (node.parentId != null && s.has(node.parentId))) {
+		return removeFamily(id, [...r, ...more], nextSet, []);
 	}
+	return removeFamily(id, more, s, [...r, node]);
+};
 
 const buildChildrenIndex = (feed: NotesListItemProps[]) => {
 	const childrenByParentId: Record<string, NotesListItemProps[]> = {};
