@@ -11,7 +11,7 @@ const Header: React.FC = () => {
 
 	const { data: session, status } = useSession();
 
-	let left = (
+	let left: React.ReactNode = (
 		<div className="left">
 			<Link
 				href="/"
@@ -42,7 +42,7 @@ const Header: React.FC = () => {
 		</div>
 	);
 
-	let right = null;
+	let right: React.ReactNode = null;
 
 	if (status === 'loading') {
 		left = (

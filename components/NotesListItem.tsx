@@ -20,12 +20,12 @@ export type NotesListItemProps = {
 	isFocus?: boolean;
 	isNew?: boolean;
 	children?: ReactNode;
-	onFocus?: (id) => any;
-	onCancel?: (isNewParam, noteId, parentId, sort) => any;
-	onEdit?: (noteId, title) => any;
-	onAdd?: (noteId, title) => any;
-	onComplete?: (noteId, isComplete) => any;
-	onDelete?: (noteId, parentId, sort) => any;
+	onFocus?: (id: string) => void;
+	onCancel?: (isNewParam: boolean, noteId: string, parentId: string | undefined, sort: number | undefined) => void;
+	onEdit?: (noteId: string, title: string) => void;
+	onAdd?: (noteId: string, title: string) => void;
+	onComplete?: (noteId: string, isComplete: boolean) => void;
+	onDelete?: (noteId: string, parentId: string | undefined, sort: number | undefined) => void;
 	parentId?: string;
 	complete?: boolean;
 	collapsed?: boolean;
@@ -43,11 +43,11 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
 
 	//const { isInViewport, ref } = useInViewport();
 
-	const eventKeyRef = useRef(null);
+	const eventKeyRef = useRef<string | null>(null);
 
-	const notesFeed = useNotes()
+	const notesFeed = useNotes() ?? []
 
-	const onElementRef = (node) => {
+	const onElementRef = (node: HTMLDivElement | null): void => {
 		if (node && props.isFocus) {
 			node.scrollIntoView({
 				//behavior: "smooth",
@@ -73,7 +73,7 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
 	//
 	// }
 
-	const onKeyPress = (event) => {
+	const onKeyPress = (event: KeyboardEvent): void => {
 
 		eventKeyRef.current = event.code;
 
