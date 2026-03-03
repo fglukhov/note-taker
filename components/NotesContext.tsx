@@ -1,33 +1,35 @@
 import React, { createContext, useContext } from 'react';
 
 export type NoteFeedItem = {
-	id: string;
-	title: string;
-	sort?: number;
-	parentId?: string;
-	complete?: boolean;
-	collapsed?: boolean;
-	isNew?: boolean;
+  id: string;
+  title: string;
+  sort?: number;
+  parentId?: string;
+  complete?: boolean;
+  collapsed?: boolean;
+  isNew?: boolean;
 };
 
 export const NotesContext = createContext<NoteFeedItem[] | null>(null);
 // export const NotesDispatchContext = createContext(null);
 //
-export function NotesProvider({ feed, children }: { feed: NoteFeedItem[]; children: React.ReactNode }) {
-	// const [tasks, dispatch] = useReducer(
-	// 	notesReducer,
-	// 	feed
-	// );
+export function NotesProvider({
+  feed,
+  children,
+}: {
+  feed: NoteFeedItem[];
+  children: React.ReactNode;
+}) {
+  // const [tasks, dispatch] = useReducer(
+  // 	notesReducer,
+  // 	feed
+  // );
 
-	return (
-		<NotesContext.Provider value={feed}>
-			{children}
-		</NotesContext.Provider>
-	);
+  return <NotesContext.Provider value={feed}>{children}</NotesContext.Provider>;
 }
 //
 export function useNotes(): NoteFeedItem[] | null {
-	return useContext(NotesContext);
+  return useContext(NotesContext);
 }
 //
 // export function useNotesDispatch() {
