@@ -302,497 +302,430 @@ const NotesList: React.FC<Props> = (props) => {
     isChangedRef.current = isChanged;
   }, [isChanged]);
 
+  const clearPendingUpdateTimeout = () => {
+    if (updateTimeout) {
+      clearTimeout(updateTimeout);
+    }
+  };
+
+  const handleNavigate = (event: KeyboardEvent, isCtrlCommand: boolean) => {
+    if (
+      (eventKeyRef.current !== 'ArrowUp' &&
+        eventKeyRef.current !== 'ArrowDown') ||
+      isCtrlCommand
+    ) {
+      return;
+    }
+
+    event.preventDefault();
+
+    lastKeyRef.current = null;
+    clearTimeout(timeout);
+
+    let curNote = notesFeed.find((n) => n.id == focusId.current);
+
+    // @ts-ignore
+    let curNoteFamily = getFamily(curNote.id, notesFeed);
+
+    let positionShift = 0;
+
+    if (curNote.collapsed && eventKeyRef.current == 'ArrowDown') {
+      positionShift = curNoteFamily.length - 1;
+    }
+
+    if (eventKeyRef.current === 'ArrowUp' && cursorPosition > 0) {
+      let nextPos = cursorPosition - 1;
+
+      for (const range of hiddenRanges) {
+        if (nextPos >= range.start && nextPos <= range.end) {
+          nextPos = range.start - 1;
+          break;
+        }
+      }
+
+      setCursorPosition(nextPos);
+      saveCursorPosition.current = nextPos;
+
+      let navNote = notesFeed.find((n) => n.id == focusId.current);
+      let navParentId = navNote.parentId;
+      let navParents = [];
+
+      while (navParentId != undefined && navParentId != 'root') {
+        let navParent = notesFeed.find((n) => n.id == navParentId);
+
+        navParents.push({
+          id: navParentId,
+          collapsed: navParent.collapsed,
+        });
+
+        navParentId = navParent.parentId;
+      }
+
+      let navParentsReverted = navParents.reverse();
+
+      for (let i = 0; i < navParentsReverted.length; i++) {
+        if (navParentsReverted[i].collapsed) {
+          positionShift = getFamily(navParentsReverted[i].id, notesFeed).length;
+          break;
+        }
+      }
+
+      if (positionShift != 0) {
+        setCursorPosition(saveCursorPosition.current - positionShift + 1);
+      }
+    } else if (
+      eventKeyRef.current === 'ArrowDown' &&
+      cursorPosition + positionShift < notesFeed.length - 1 &&
+      cursorPosition !== null
+    ) {
+      setCursorPosition(cursorPosition + 1 + positionShift);
+    } else if (eventKeyRef.current === 'ArrowDown' && cursorPosition === null) {
+      setCursorPosition(0);
+    }
+  };
+
+  const handleStartEditShortcut = () => {
+    if (!(eventKeyRef.current === 'KeyE' && lastKeyRef.current === 'KeyE')) {
+      return;
+    }
+
+    clearTimeout(timeout);
+    lastKeyRef.current = null;
+
+    setTimeout(function () {
+      setIsEditTitle(true);
+    }, 1);
+  };
+
+  const handleOpenNoteShortcut = () => {
+    if (!(eventKeyRef.current === 'KeyN' && lastKeyRef.current === 'KeyN')) {
+      return;
+    }
+
+    let curNote = notesFeed.find((n) => n.id == focusId.current);
+    Router.push('/n/[id]', `/n/${curNote.id}`);
+  };
+
+  const handleIndent = (event: KeyboardEvent, isCtrlCommand: boolean) => {
+    if (!(eventKeyRef.current == 'ArrowRight' && isCtrlCommand)) {
+      return;
+    }
+
+    event.preventDefault();
+    clearPendingUpdateTimeout();
+
+    let curNote = notesFeed.find((n) => n.id == focusId.current);
+    let parentId = curNote.parentId;
+    const siblingsIds = [];
+
+    notesFeed.map((n) => {
+      if (n.parentId == parentId) {
+        siblingsIds.push(n.id);
+      }
+    });
+
+    let prevSiblingId = null;
+
+    siblingsIds.map((id, i) => {
+      if (id === focusId.current && i > 0) {
+        prevSiblingId = siblingsIds[i - 1];
+      }
+    });
+
+    let newSiblingsCount = 0;
+
+    notesFeed.map((n) => {
+      if (n.parentId === prevSiblingId) {
+        newSiblingsCount += 1;
+      }
+    });
+
+    let newSort = newSiblingsCount;
+    let newParentId = prevSiblingId;
+
+    if (curNote.sort > 0 && prevSiblingId !== null) {
+      const newFeed = notesFeed.map((n) => {
+        if (n.id === curNote.id) {
+          if (!updatedIds.current.includes(n.id)) updatedIds.current.push(n.id);
+
+          return {
+            ...n,
+            parentId: newParentId,
+            sort: newSort,
+          };
+        } else if (n.parentId === curNote.parentId && n.sort > curNote.sort) {
+          if (!updatedIds.current.includes(n.id)) updatedIds.current.push(n.id);
+
+          return {
+            ...n,
+            sort: n.sort - 1,
+          };
+        } else {
+          return n;
+        }
+      });
+
+      newFeed.sort((a, b) => a.sort - b.sort);
+
+      scheduleSyncUpdate();
+
+      syncFeed.current = newFeed;
+      setNotesFeed(newFeed);
+    }
+  };
+
+  const handleUnindent = (event: KeyboardEvent, isCtrlCommand: boolean) => {
+    if (!(eventKeyRef.current == 'ArrowLeft' && isCtrlCommand)) {
+      return;
+    }
+
+    event.preventDefault();
+    clearPendingUpdateTimeout();
+
+    let curNote = notesFeed.find((n) => n.id == focusId.current);
+    let parentId = curNote.parentId;
+
+    let curNoteSiblings = notesFeed.filter(
+      (n) => n.parentId === curNote.parentId,
+    );
+    let parentFamily = getFamily(curNote.parentId, notesFeed);
+
+    // @ts-ignore
+    let curNoteFamily = removeFamily(curNote.id, parentFamily);
+
+    let positionShift = 0;
+
+    if (curNote.sort < curNoteSiblings.length - 1) {
+      positionShift = curNoteFamily.length - 1;
+    }
+
+    if (parentId !== 'root') {
+      let curParent = notesFeed.find((n) => n.id == parentId);
+      let newParentId = curParent.parentId;
+      let newSort = curParent.sort + 1;
+
+      let newFeed = notesFeed.map((n) => {
+        if (n.id === curNote.id) {
+          if (!updatedIds.current.includes(n.id)) updatedIds.current.push(n.id);
+
+          return {
+            ...n,
+            isNew: false,
+            parentId: newParentId,
+            sort: newSort,
+          };
+        } else if (n.parentId === newParentId && n.sort > curParent.sort) {
+          if (!updatedIds.current.includes(n.id)) updatedIds.current.push(n.id);
+
+          return {
+            ...n,
+            sort: n.sort + 1,
+          };
+        } else if (n.parentId === parentId && n.sort > curNote.sort) {
+          if (!updatedIds.current.includes(n.id)) updatedIds.current.push(n.id);
+
+          return {
+            ...n,
+            sort: n.sort - 1,
+          };
+        } else {
+          return n;
+        }
+      });
+
+      newFeed.sort((a, b) => a.sort - b.sort);
+
+      scheduleSyncUpdate();
+
+      syncFeed.current = newFeed;
+      setNotesFeed(newFeed);
+      setCursorPosition(cursorPosition + positionShift);
+    }
+  };
+
+  const handleCollapse = (event: KeyboardEvent, isCtrlCommand: boolean) => {
+    if (
+      (eventKeyRef.current != 'ArrowRight' &&
+        eventKeyRef.current != 'ArrowLeft') ||
+      isCtrlCommand
+    ) {
+      return;
+    }
+
+    event.preventDefault();
+
+    let collapsed = false;
+    if (eventKeyRef.current == 'ArrowLeft') {
+      collapsed = true;
+    }
+
+    clearPendingUpdateTimeout();
+
+    let curNote = notesFeed.find((n) => n.id == focusId.current);
+
+    let newFeed = notesFeed.map((n) => {
+      if (n.id === curNote.id) {
+        if (!updatedIds.current.includes(n.id)) updatedIds.current.push(n.id);
+
+        return {
+          ...n,
+          collapsed: collapsed,
+        };
+      } else {
+        return n;
+      }
+    });
+
+    newFeed.sort((a, b) => a.sort - b.sort);
+
+    scheduleSyncUpdate();
+    syncFeed.current = newFeed;
+    setNotesFeed(newFeed);
+  };
+
+  const handleSort = (event: KeyboardEvent, isCtrlCommand: boolean) => {
+    if (
+      (eventKeyRef.current != 'ArrowUp' &&
+        eventKeyRef.current != 'ArrowDown') ||
+      !isCtrlCommand
+    ) {
+      return;
+    }
+
+    event.preventDefault();
+    clearPendingUpdateTimeout();
+
+    let sortShift = 0;
+    let curNote = notesFeed.find((n) => n.id == focusId.current);
+    let curNoteSiblings = notesFeed.filter(
+      (n) => n.parentId === curNote.parentId,
+    );
+
+    let shiftedNote = null;
+
+    if (eventKeyRef.current == 'ArrowUp') {
+      if (curNote.sort > 0) {
+        sortShift = -1;
+        shiftedNote = curNoteSiblings.filter(
+          (n) => n.sort == curNote.sort - 1,
+        )[0];
+      }
+    } else if (eventKeyRef.current == 'ArrowDown') {
+      if (curNote.sort < curNoteSiblings.length - 1) {
+        sortShift = 1;
+        shiftedNote = curNoteSiblings.filter(
+          (n) => n.sort == curNote.sort + 1,
+        )[0];
+      }
+    }
+
+    if (sortShift != 0) {
+      let shiftedNoteFamily = getFamily(shiftedNote.id, notesFeed);
+
+      updatedIds.current.push(curNote.id);
+      updatedIds.current.push(shiftedNote.id);
+
+      let newFeed = notesFeed.map((n) => {
+        if (n.id === curNote.id) {
+          return {
+            ...n,
+            sort: n.sort + sortShift,
+          };
+        } else if (n.id === shiftedNote.id) {
+          return {
+            ...n,
+            sort: n.sort - sortShift,
+          };
+        } else {
+          return n;
+        }
+      });
+
+      newFeed.sort((a, b) => a.sort - b.sort);
+
+      scheduleSyncUpdate();
+
+      syncFeed.current = newFeed;
+      setNotesFeed(newFeed);
+
+      setCursorPosition(cursorPosition + sortShift * shiftedNoteFamily.length);
+    }
+  };
+
+  const handleComplete = (event: KeyboardEvent) => {
+    if (eventKeyRef.current != 'Space') {
+      return;
+    }
+
+    event.preventDefault();
+    clearPendingUpdateTimeout();
+
+    let curNote = notesFeed.find((n) => n.id == focusId.current);
+
+    // @ts-ignore
+    let removedFeed = removeFamily(curNote.id, notesFeed);
+
+    let remainingIds = removedFeed.map((n) => n.id);
+    let allIds = notesFeed.map((n) => n.id);
+    let completeIds = [];
+
+    allIds.map((id) => {
+      if (!remainingIds.includes(id)) {
+        completeIds.push(id);
+      }
+    });
+
+    let newFeed = notesFeed.map((n) => {
+      if (completeIds.includes(n.id)) {
+        if (!updatedIds.current.includes(n.id)) updatedIds.current.push(n.id);
+
+        return {
+          ...n,
+          complete: !curNote.complete,
+        };
+      } else {
+        return n;
+      }
+    });
+
+    scheduleSyncUpdate();
+    syncFeed.current = newFeed;
+    setNotesFeed(newFeed);
+  };
+
+  const handleDeleteShortcut = () => {
+    if (eventKeyRef.current == 'Delete') {
+      handleDelete();
+    }
+  };
+
+  const handleInsertShortcut = (event: KeyboardEvent) => {
+    if (eventKeyRef.current == 'Enter') {
+      insertNote(event);
+    }
+  };
+
   const onKeyPress = (event: KeyboardEvent): void => {
     let isCtrlCommand = event.ctrlKey || event.metaKey;
 
     eventKeyRef.current = event.code;
 
     clearTimeout(timeout);
-
-    // Setting timeout on key press
-
     timeout = setTimeout(function () {
-      // Setting last pressed key to null if 1 second have passed
-
       lastKeyRef.current = null;
     }, 1000);
 
     if (!isEditTitle) {
-      if (
-        (eventKeyRef.current === 'ArrowUp' ||
-          eventKeyRef.current === 'ArrowDown') &&
-        !isCtrlCommand
-      ) {
-        event.preventDefault();
-
-        lastKeyRef.current = null;
-        clearTimeout(timeout);
-
-        let curNote = notesFeed.find((n) => n.id == focusId.current);
-
-        // @ts-ignore
-        let curNoteFamily = getFamily(curNote.id, notesFeed);
-
-        // TODO искать не соседей одного уровня, а все заметки по position
-
-        let positionShift = 0;
-
-        if (curNote.collapsed && eventKeyRef.current == 'ArrowDown') {
-          positionShift = curNoteFamily.length - 1;
-        }
-
-        // if (prevNav !== undefined && prevNav.collapsed && eventKeyRef.current == "ArrowUp") {
-        //
-        // 	console.log(prevNav.title)
-        //
-        // 	let prevNoteFamily = getFamily(prevNavId, notesFeed);
-        //
-        // 	positionShift = prevNoteFamily.length - 1;
-        //
-        // }
-        //console.log(cursorPosition)
-
-        if (eventKeyRef.current === 'ArrowUp' && cursorPosition > 0) {
-          let nextPos = cursorPosition - 1;
-
-          // если попали внутрь любого скрытого диапазона — прыгаем на свёрнутого родителя (перед диапазоном)
-          for (const range of hiddenRanges) {
-            if (nextPos >= range.start && nextPos <= range.end) {
-              nextPos = range.start - 1;
-              break;
-            }
-          }
-
-          setCursorPosition(nextPos);
-          saveCursorPosition.current = nextPos;
-
-          let navNote = notesFeed.find((n) => n.id == focusId.current);
-
-          // TODO определить, есть ли у navNote свернутый родитель и посчитать размер его семьи
-
-          let navParentId = navNote.parentId;
-
-          let navParents = [];
-
-          while (navParentId != undefined && navParentId != 'root') {
-            let navParent = notesFeed.find((n) => n.id == navParentId);
-
-            navParents.push({
-              id: navParentId,
-              collapsed: navParent.collapsed,
-            });
-
-            navParentId = navParent.parentId;
-          }
-
-          let navParentsReverted = navParents.reverse();
-
-          for (let i = 0; i < navParentsReverted.length; i++) {
-            if (navParentsReverted[i].collapsed) {
-              positionShift = getFamily(
-                navParentsReverted[i].id,
-                notesFeed,
-              ).length;
-              break;
-            }
-          }
-
-          if (positionShift != 0) {
-            setCursorPosition(saveCursorPosition.current - positionShift + 1);
-          }
-        } else if (
-          eventKeyRef.current === 'ArrowDown' &&
-          cursorPosition + positionShift < notesFeed.length - 1 &&
-          cursorPosition !== null
-        ) {
-          setCursorPosition(cursorPosition + 1 + positionShift);
-        } else if (
-          eventKeyRef.current === 'ArrowDown' &&
-          cursorPosition === null
-        ) {
-          setCursorPosition(0);
-        }
-      }
-
-      // Edit note title on "ee"
-
-      if (
-        eventKeyRef.current === 'KeyE' &&
-        lastKeyRef.current === 'KeyE' &&
-        !isEditTitle
-      ) {
-        clearTimeout(timeout);
-        lastKeyRef.current = null;
-
-        setTimeout(function () {
-          setIsEditTitle(true);
-        }, 1);
-      }
-
-      // Open full note on "nn"
-
-      if (
-        eventKeyRef.current === 'KeyN' &&
-        lastKeyRef.current === 'KeyN' &&
-        !isEditTitle
-      ) {
-        let curNote = notesFeed.find((n) => n.id == focusId.current);
-
-        Router.push('/n/[id]', `/n/${curNote.id}`);
-      }
-
-      // Indent
-
-      if (
-        eventKeyRef.current == 'ArrowRight' &&
-        isCtrlCommand &&
-        !isEditTitle
-      ) {
-        event.preventDefault();
-
-        if (updateTimeout) {
-          clearTimeout(updateTimeout);
-        }
-
-        let curNote = notesFeed.find((n) => n.id == focusId.current);
-
-        let parentId = curNote.parentId;
-
-        const siblingsIds = [];
-
-        notesFeed.map((n) => {
-          if (n.parentId == parentId) {
-            siblingsIds.push(n.id);
-          }
-        });
-
-        let prevSiblingId = null;
-
-        siblingsIds.map((id, i) => {
-          if (id === focusId.current && i > 0) {
-            prevSiblingId = siblingsIds[i - 1];
-          }
-        });
-
-        // Считаем количество прямых детей нового родительского элемента
-
-        let newSiblingsCount = 0;
-
-        notesFeed.map((n) => {
-          if (n.parentId === prevSiblingId) {
-            newSiblingsCount += 1;
-          }
-        });
-
-        let newSort = newSiblingsCount;
-
-        let newParentId = prevSiblingId;
-
-        if (curNote.sort > 0 && prevSiblingId !== null) {
-          const newFeed = notesFeed.map((n) => {
-            if (n.id === curNote.id) {
-              if (!updatedIds.current.includes(n.id))
-                updatedIds.current.push(n.id);
-
-              return {
-                ...n,
-                parentId: newParentId,
-                sort: newSort,
-              };
-            } else if (
-              n.parentId === curNote.parentId &&
-              n.sort > curNote.sort
-            ) {
-              if (!updatedIds.current.includes(n.id))
-                updatedIds.current.push(n.id);
-
-              return {
-                ...n,
-                sort: n.sort - 1,
-              };
-            } else {
-              return n;
-            }
-          });
-
-          //updatedIds.current
-
-          newFeed.sort((a, b) => a.sort - b.sort);
-
-          scheduleSyncUpdate();
-
-          //setIsChanged(true)
-
-          syncFeed.current = newFeed;
-
-          setNotesFeed(newFeed);
-
-          // indentNote(curNote.id, parentId, newParentId, newSort, curNote.sort).then(() => {
-          // 	setNotesFeed(newFeed);
-          // });
-        }
-      }
-
-      // Unindent
-
-      if (eventKeyRef.current == 'ArrowLeft' && isCtrlCommand && !isEditTitle) {
-        event.preventDefault();
-
-        if (updateTimeout) {
-          clearTimeout(updateTimeout);
-        }
-
-        let curNote = notesFeed.find((n) => n.id == focusId.current);
-        let parentId = curNote.parentId;
-
-        let curNoteSiblings = notesFeed.filter(
-          (n) => n.parentId === curNote.parentId,
-        );
-
-        let parentFamily = getFamily(curNote.parentId, notesFeed);
-
-        // @ts-ignore
-        let curNoteFamily = removeFamily(curNote.id, parentFamily);
-
-        let positionShift = 0;
-
-        if (curNote.sort < curNoteSiblings.length - 1) {
-          positionShift = curNoteFamily.length - 1;
-        }
-
-        if (parentId !== 'root') {
-          let curParent = notesFeed.find((n) => n.id == parentId);
-          let newParentId = curParent.parentId;
-
-          let newSort = curParent.sort + 1;
-
-          let newFeed = notesFeed.map((n) => {
-            if (n.id === curNote.id) {
-              if (!updatedIds.current.includes(n.id))
-                updatedIds.current.push(n.id);
-
-              return {
-                ...n,
-                isNew: false,
-                parentId: newParentId,
-                sort: newSort,
-              };
-            } else if (n.parentId === newParentId && n.sort > curParent.sort) {
-              if (!updatedIds.current.includes(n.id))
-                updatedIds.current.push(n.id);
-
-              return {
-                ...n,
-                sort: n.sort + 1,
-              };
-            } else if (n.parentId === parentId && n.sort > curNote.sort) {
-              if (!updatedIds.current.includes(n.id))
-                updatedIds.current.push(n.id);
-
-              return {
-                ...n,
-                sort: n.sort - 1,
-              };
-            } else {
-              return n;
-            }
-          });
-
-          newFeed.sort((a, b) => a.sort - b.sort);
-
-          scheduleSyncUpdate();
-
-          syncFeed.current = newFeed;
-
-          setNotesFeed(newFeed);
-          setCursorPosition(cursorPosition + positionShift);
-
-          // unindentNote(curNote.id, parentId, newParentId, newSort, curNote.sort, curParent.sort).then(() => {
-          // 	setNotesFeed(newFeed);
-          // 	setCursorPosition(cursorPosition + positionShift)
-          // });
-        }
-      }
-
-      // Collapse
-
-      if (
-        (eventKeyRef.current == 'ArrowRight' ||
-          eventKeyRef.current == 'ArrowLeft') &&
-        !isCtrlCommand &&
-        !isEditTitle
-      ) {
-        event.preventDefault();
-
-        let collapsed = false;
-
-        if (eventKeyRef.current == 'ArrowLeft') {
-          collapsed = true;
-        }
-
-        if (updateTimeout) {
-          clearTimeout(updateTimeout);
-        }
-
-        let curNote = notesFeed.find((n) => n.id == focusId.current);
-
-        let newFeed = notesFeed.map((n) => {
-          if (n.id === curNote.id) {
-            if (!updatedIds.current.includes(n.id))
-              updatedIds.current.push(n.id);
-
-            return {
-              ...n,
-              collapsed: collapsed,
-            };
-          } else {
-            return n;
-          }
-        });
-
-        newFeed.sort((a, b) => a.sort - b.sort);
-
-        scheduleSyncUpdate();
-
-        syncFeed.current = newFeed;
-
-        setNotesFeed(newFeed);
-      }
-
-      // Sort
-
-      if (
-        (eventKeyRef.current == 'ArrowUp' ||
-          eventKeyRef.current == 'ArrowDown') &&
-        isCtrlCommand &&
-        !isEditTitle
-      ) {
-        event.preventDefault();
-
-        if (updateTimeout) {
-          clearTimeout(updateTimeout);
-        }
-
-        let sortShift = 0;
-
-        let curNote = notesFeed.find((n) => n.id == focusId.current);
-
-        let curNoteSiblings = notesFeed.filter(
-          (n) => n.parentId === curNote.parentId,
-        );
-
-        let shiftedNote = null;
-
-        if (eventKeyRef.current == 'ArrowUp') {
-          if (curNote.sort > 0) {
-            sortShift = -1;
-
-            shiftedNote = curNoteSiblings.filter(
-              (n) => n.sort == curNote.sort - 1,
-            )[0];
-          }
-        } else if (eventKeyRef.current == 'ArrowDown') {
-          if (curNote.sort < curNoteSiblings.length - 1) {
-            sortShift = 1;
-
-            shiftedNote = curNoteSiblings.filter(
-              (n) => n.sort == curNote.sort + 1,
-            )[0];
-          }
-        }
-
-        if (sortShift != 0) {
-          let shiftedNoteFamily = getFamily(shiftedNote.id, notesFeed);
-
-          updatedIds.current.push(curNote.id);
-          updatedIds.current.push(shiftedNote.id);
-
-          let newFeed = notesFeed.map((n) => {
-            if (n.id === curNote.id) {
-              return {
-                ...n,
-                sort: n.sort + sortShift,
-              };
-            } else if (n.id === shiftedNote.id) {
-              return {
-                ...n,
-                sort: n.sort - sortShift,
-              };
-            } else {
-              return n;
-            }
-          });
-
-          newFeed.sort((a, b) => a.sort - b.sort);
-
-          scheduleSyncUpdate();
-
-          syncFeed.current = newFeed;
-
-          setNotesFeed(newFeed);
-
-          setCursorPosition(
-            cursorPosition + sortShift * shiftedNoteFamily.length,
-          );
-        }
-      }
-
-      // Complete
-
-      if (eventKeyRef.current == 'Space' && !isEditTitle) {
-        event.preventDefault();
-
-        if (updateTimeout) {
-          clearTimeout(updateTimeout);
-        }
-
-        let curNote = notesFeed.find((n) => n.id == focusId.current);
-
-        // @ts-ignore
-        let removedFeed = removeFamily(curNote.id, notesFeed);
-
-        let remainingIds = removedFeed.map((n) => n.id);
-
-        let allIds = notesFeed.map((n) => n.id);
-
-        let completeIds = [];
-
-        allIds.map((id) => {
-          if (!remainingIds.includes(id)) {
-            completeIds.push(id);
-          }
-        });
-
-        let newFeed = notesFeed.map((n) => {
-          if (completeIds.includes(n.id)) {
-            if (!updatedIds.current.includes(n.id))
-              updatedIds.current.push(n.id);
-
-            return {
-              ...n,
-              complete: !curNote.complete,
-            };
-          } else {
-            return n;
-          }
-        });
-
-        scheduleSyncUpdate();
-
-        syncFeed.current = newFeed;
-
-        setNotesFeed(newFeed);
-      }
-
-      // Delete
-
-      if (eventKeyRef.current == 'Delete' && !isEditTitle) {
-        handleDelete();
-      }
-
-      if (eventKeyRef.current == 'Enter' && !isEditTitle) {
-        insertNote(event);
-      }
+      handleNavigate(event, isCtrlCommand);
+      handleStartEditShortcut();
+      handleOpenNoteShortcut();
+      handleIndent(event, isCtrlCommand);
+      handleUnindent(event, isCtrlCommand);
+      handleCollapse(event, isCtrlCommand);
+      handleSort(event, isCtrlCommand);
+      handleComplete(event);
+      handleDeleteShortcut();
+      handleInsertShortcut(event);
     } else {
       // clearTimeout(timeout);
       // lastKeyRef.current = null;
