@@ -19,7 +19,7 @@ const overlapsRange = (
 ): boolean => {
   // Treat caret as a point.
   if (selectionFrom === selectionTo) {
-    return selectionFrom >= from && selectionFrom < to;
+    return selectionFrom >= from && selectionFrom <= to;
   }
   return selectionFrom < to && selectionTo > from;
 };
