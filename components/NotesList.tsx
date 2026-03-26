@@ -105,6 +105,14 @@ const NotesList: React.FC<Props> = (props) => {
     }
   }
 
+  const scheduleSyncUpdate = () => {
+    updateTimeout = setTimeout(function () {
+      setIsChanged(true);
+      savedUpdatedIds.current = updatedIds.current;
+      updatedIds.current = [];
+    }, 1000);
+  };
+
   const handleDelete = () => {
     setIsEditTitle(false);
 
@@ -157,13 +165,7 @@ const NotesList: React.FC<Props> = (props) => {
 
     //console.log(newFeed)
 
-    updateTimeout = setTimeout(function () {
-      setIsChanged(true);
-
-      savedUpdatedIds.current = updatedIds.current;
-
-      updatedIds.current = [];
-    }, 1000);
+    scheduleSyncUpdate();
 
     syncFeed.current = newFeed;
 
@@ -517,13 +519,7 @@ const NotesList: React.FC<Props> = (props) => {
 
           newFeed.sort((a, b) => a.sort - b.sort);
 
-          updateTimeout = setTimeout(function () {
-            setIsChanged(true);
-
-            savedUpdatedIds.current = updatedIds.current;
-
-            updatedIds.current = [];
-          }, 1000);
+          scheduleSyncUpdate();
 
           //setIsChanged(true)
 
@@ -604,12 +600,7 @@ const NotesList: React.FC<Props> = (props) => {
 
           newFeed.sort((a, b) => a.sort - b.sort);
 
-          updateTimeout = setTimeout(function () {
-            setIsChanged(true);
-            savedUpdatedIds.current = updatedIds.current;
-
-            updatedIds.current = [];
-          }, 1000);
+          scheduleSyncUpdate();
 
           syncFeed.current = newFeed;
 
@@ -661,13 +652,7 @@ const NotesList: React.FC<Props> = (props) => {
 
         newFeed.sort((a, b) => a.sort - b.sort);
 
-        updateTimeout = setTimeout(function () {
-          setIsChanged(true);
-
-          savedUpdatedIds.current = updatedIds.current;
-
-          updatedIds.current = [];
-        }, 1000);
+        scheduleSyncUpdate();
 
         syncFeed.current = newFeed;
 
@@ -740,13 +725,7 @@ const NotesList: React.FC<Props> = (props) => {
 
           newFeed.sort((a, b) => a.sort - b.sort);
 
-          updateTimeout = setTimeout(function () {
-            setIsChanged(true);
-
-            savedUpdatedIds.current = updatedIds.current;
-
-            updatedIds.current = [];
-          }, 1000);
+          scheduleSyncUpdate();
 
           syncFeed.current = newFeed;
 
@@ -798,13 +777,7 @@ const NotesList: React.FC<Props> = (props) => {
           }
         });
 
-        updateTimeout = setTimeout(function () {
-          setIsChanged(true);
-
-          savedUpdatedIds.current = updatedIds.current;
-
-          updatedIds.current = [];
-        }, 1000);
+        scheduleSyncUpdate();
 
         syncFeed.current = newFeed;
 
@@ -928,13 +901,7 @@ const NotesList: React.FC<Props> = (props) => {
       setCursorPosition(cursorPosition + 1);
     }
 
-    updateTimeout = setTimeout(function () {
-      setIsChanged(true);
-
-      savedUpdatedIds.current = updatedIds.current;
-
-      updatedIds.current = [];
-    }, 1000);
+    scheduleSyncUpdate();
 
     syncFeed.current = newFeed;
 
