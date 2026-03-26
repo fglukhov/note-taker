@@ -12,6 +12,7 @@ import Layout from '@/components/Layout';
 import { NoteProps } from '@/components/Note';
 import { useSession } from 'next-auth/react';
 import prisma from '@/lib/prisma';
+import MarkdownNoteEditor from '@/components/MarkdownNoteEditor';
 //import {getAllNotesIds} from "@/lib/notes";
 
 Modal.setAppElement('#__next');
@@ -86,11 +87,29 @@ const NoteExpanded: React.FC<NoteProps> = (props) => {
     }
   };
 
+  const [didAutoEnterEdit, setDidAutoEnterEdit] = useState(false);
+
+  const userHasValidSession = Boolean(session);
+  const noteBelongsToUser = session?.user?.email === props.author?.email;
+
+  const shouldAutoEnterEdit =
+    status !== 'loading' &&
+    userHasValidSession &&
+    noteBelongsToUser &&
+    !didAutoEnterEdit;
+
+  const isEditUI = isEdit || shouldAutoEnterEdit;
+
+  useEffect(() => {
+    if (shouldAutoEnterEdit) {
+      setIsEdit(true);
+      setDidAutoEnterEdit(true);
+    }
+  }, [shouldAutoEnterEdit]);
+
   if (status === 'loading') {
     return <div>Authenticating ...</div>;
   }
-  const userHasValidSession = Boolean(session);
-  const noteBelongsToUser = session?.user?.email === props.author?.email;
 
   return (
     <Layout>
@@ -98,24 +117,23 @@ const NoteExpanded: React.FC<NoteProps> = (props) => {
         isOpen={modalIsOpen} // The modal should always be shown on page load, it is the 'page'
         onRequestClose={closeModal}
         contentLabel={title}
+        shouldFocusAfterRender={false}
       >
         <button onClick={closeModal}>close</button>
 
-        {isEdit ? (
+        {isEditUI ? (
           <form onSubmit={editData}>
             <input
-              autoFocus
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Title"
               type="text"
               value={title}
             />
-            <textarea
-              cols={50}
-              onChange={(e) => setContent(e.target.value)}
-              placeholder="Content"
-              rows={8}
+            <MarkdownNoteEditor
               value={content}
+              onChange={(val) => setContent(val)}
+              placeholder="Content"
+              autoFocus
             />
             <input disabled={!title} type="submit" value="Save" />
           </form>
@@ -127,12 +145,19 @@ const NoteExpanded: React.FC<NoteProps> = (props) => {
           </>
         )}
 
-        {!isEdit && userHasValidSession && noteBelongsToUser && (
+        {!isEditUI && userHasValidSession && noteBelongsToUser && (
           <button onClick={() => setIsEdit(true)}>Edit</button>
         )}
 
-        {isEdit && userHasValidSession && noteBelongsToUser && (
-          <button onClick={() => setIsEdit(false)}>Cancel edit</button>
+        {isEditUI && userHasValidSession && noteBelongsToUser && (
+          <button
+            onClick={() => {
+              setIsEdit(false);
+              setDidAutoEnterEdit(true);
+            }}
+          >
+            Cancel edit
+          </button>
         )}
         {userHasValidSession && noteBelongsToUser && (
           <button onClick={() => deleteNote(props.id)}>Delete</button>
