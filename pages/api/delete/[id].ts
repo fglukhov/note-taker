@@ -1,50 +1,72 @@
 // pages/api/post/[id].ts
 
-import prisma from '../../../lib/prisma';
-import {getSession} from "next-auth/react";
+import prisma from '@/lib/prisma';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/pages/api/auth/[...nextauth]';
 
 // DELETE /api/delete/:id
 export default async function handle(req, res) {
+  try {
+    if (req.method !== 'DELETE') {
+      return res.status(405).json({
+        error: `The HTTP ${req.method} method is not supported at this route.`,
+      });
+    }
 
-	const noteId = req.query.id;
+    const noteId = String(req.query.id);
+    const { sort, remainingIds, parentId } = req.body;
 
-	const { id, title, sort, remainingIds, parentId } = req.body;
+    // ============================
+    // AUTH
+    // ============================
+    const session = await getServerSession(req, res, authOptions);
+    if (!session?.user?.email) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
 
-	const session = await getSession({ req });
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email },
+      select: { id: true },
+    });
 
-	if (req.method === 'DELETE') {
+    if (!user?.id) {
+      return res.status(401).json({ error: 'User not found' });
+    }
+    // ============================
 
-		const updateSort = await prisma.note.updateMany({
-			where: {
-				// @ts-ignore
-				authorId: session.user.id,
-				parentId: parentId,
-				sort: {
-					gt: sort
-				}
-			},
-			data: {
-				sort: {
-					decrement: 1,
-				}
-			},
-		});
+    // 1) поправить sort у соседей (только у этого юзера)
+    await prisma.note.updateMany({
+      where: {
+        authorId: user.id,
+        parentId,
+        sort: { gt: sort },
+      },
+      data: {
+        sort: { decrement: 1 },
+      },
+    });
 
-		const deleteNotes = await prisma.note.deleteMany({
-			where: {
-				NOT: {
-					id: {
-						in: remainingIds
-					}
-				}
-			}
-		});
+    // 2) удалить только те заметки, которые принадлежат юзеру и не входят в remainingIds
+    const deleteNotes = await prisma.note.deleteMany({
+      where: {
+        authorId: user.id,
+        NOT: {
+          id: {
+            in: remainingIds,
+          },
+        },
+      },
+    });
 
-		res.json(deleteNotes);
-
-	} else {
-		throw new Error(
-			`The HTTP ${req.method} method is not supported at this route.`,
-		);
-	}
+    return res.json(deleteNotes);
+  } catch (e) {
+    console.error('API /delete error:', e);
+    return res.status(500).json({
+      error: e?.message || String(e),
+      name: e?.name,
+      code: e?.code,
+      meta: e?.meta,
+      stack: e?.stack,
+    });
+  }
 }

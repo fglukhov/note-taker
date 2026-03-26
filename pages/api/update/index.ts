@@ -1,79 +1,91 @@
-// pages/api/note/index.ts
+// pages/api/update/index.ts
 
-import { getSession } from 'next-auth/react';
-import prisma from '../../../lib/prisma';
-
-// POST /api/note
-// Required fields in body: titlenext
-// Optional fields in body: content
+import prisma from '@/lib/prisma';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/pages/api/auth/[...nextauth]';
 
 export const config = {
-	api: {
-		externalResolver: true,
-	},
-}
+  api: { externalResolver: true },
+};
 
 export default async function handle(req, res) {
+  try {
+    const { feed, ids } = req.body;
 
-	const { prevFeed, feed, ids } = req.body;
+    // ============================
+    // AUTH
+    // ============================
+    const session = await getServerSession(req, res, authOptions);
 
-	const session = await getSession({ req });
+    if (!session?.user?.email) {
+      return res.status(401).json({
+        error: 'Guest mode — saving disabled',
+      });
+    }
 
-	const updateRow = async (id, sort, parentId, complete, collapsed, title) => {
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email },
+      select: { id: true },
+    });
 
-		await prisma.note.upsert({
-			where: {
-				id: id,
-			},
+    if (!user?.id) {
+      return res.status(401).json({ error: 'User not found' });
+    }
+    // ============================
 
-			update: {
-				sort: sort,
-				parentId: parentId,
-				complete: complete,
-				collapsed: collapsed,
-				title: title,
-			},
+    const updateRow = (id, sort, parentId, complete, collapsed, title) => {
+      return prisma.note.upsert({
+        where: { id },
 
-			create: {
-				id: id,
-				sort: sort,
-				parentId: parentId,
-				complete: complete,
-				collapsed: collapsed,
-				title: title,
-				author: { connect: { email: session?.user?.email } },
-			}
+        update: {
+          sort,
+          parentId,
+          complete: complete ?? false,
+          collapsed: collapsed ?? false,
+          title,
+        },
 
-		})
+        create: {
+          id,
+          sort,
+          parentId,
+          complete: complete ?? false,
+          collapsed: collapsed ?? false,
+          title,
+          authorId: user.id,
+        },
+      });
+    };
 
-	}
-	const deleteRow = async (id) => {
+    const deleteRow = (id) => {
+      return prisma.note.delete({ where: { id } });
+    };
 
-		await prisma.note.delete({
-			where: {
-				id: id,
-			},
-		})
+    const results = await Promise.all(
+      ids.map((id) => {
+        const curNote = feed.find((n) => n.id === id);
+        return curNote
+          ? updateRow(
+              id,
+              curNote.sort,
+              curNote.parentId,
+              curNote.complete,
+              curNote.collapsed,
+              curNote.title,
+            )
+          : deleteRow(id);
+      }),
+    );
 
-	}
-
-	const results = await Promise.all(
-
-		ids.map(id => {
-			let curNote = feed.find(n => n.id === id);
-			if (curNote == undefined) {
-				deleteRow(id)
-			} else {
-				updateRow(id, curNote.sort, curNote.parentId, curNote.complete, curNote.collapsed, curNote.title)
-			}
-		})
-	)
-
-
-
-	res.json(results);
-
+    return res.json(results);
+  } catch (e) {
+    console.error('API /update error:', e);
+    return res.status(500).json({
+      error: e?.message || String(e),
+      name: e?.name,
+      code: e?.code,
+      meta: e?.meta,
+      stack: e?.stack,
+    });
+  }
 }
-
-
-// Deploy test

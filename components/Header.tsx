@@ -11,18 +11,19 @@ const Header: React.FC = () => {
 
 	const { data: session, status } = useSession();
 
-	let left = (
+	let left: React.ReactNode = (
 		<div className="left">
-			<Link href="/">
-				<a className="bold" data-active={isActive('/')}>
-					Note taker
-				</a>
+			<Link
+				href="/"
+				className="logo"
+				data-active={isActive('/')}>
+					Great Plan
 			</Link>
 			<style jsx>{`
         .bold {
           font-weight: bold;
         }
-
+        
         a {
           text-decoration: none;
           color: var(--geist-foreground);
@@ -36,19 +37,22 @@ const Header: React.FC = () => {
         a + a {
           margin-left: 1rem;
         }
+        
       `}</style>
 		</div>
 	);
 
-	let right = null;
+	let right: React.ReactNode = null;
 
 	if (status === 'loading') {
 		left = (
 			<div className="left">
-				<Link href="/">
-					<a className="bold" data-active={isActive('/')}>
-						Note taker
-					</a>
+				<Link
+					href="/"
+					className="logo"
+					data-active={isActive('/')}
+				>
+						Great Plan
 				</Link>
 				<style jsx>{`
           .bold {
@@ -68,6 +72,8 @@ const Header: React.FC = () => {
           a + a {
             margin-left: 1rem;
           }
+          
+
         `}</style>
 			</div>
 		);
@@ -86,8 +92,8 @@ const Header: React.FC = () => {
 	if (!session) {
 		right = (
 			<div className="right">
-				<Link href="/api/auth/signin">
-					<a data-active={isActive('/signup')}>Log in</a>
+				<Link href="/api/auth/signin" className="login-button" data-active={isActive('/signup')}>
+					Log in
 				</Link>
 				<style jsx>{`
           a {
@@ -109,6 +115,9 @@ const Header: React.FC = () => {
             padding: 0.5rem 1rem;
             border-radius: 3px;
           }
+          
+
+          
         `}</style>
 			</div>
 		);
@@ -117,14 +126,12 @@ const Header: React.FC = () => {
 	if (session) {
 		left = (
 			<div className="left">
-				<Link href="/">
-					<a className="bold" data-active={isActive('/')}>
-						Note taker
-					</a>
+				<Link href="/" className="logo" data-active={isActive('/')}>
+					Great Plan
 				</Link>
-				<Link href="/">
-					<a data-active={isActive('/')}>Notes</a>
-				</Link>
+				{/*<Link href="/"  data-active={isActive('/')}>*/}
+				{/*	Notes*/}
+				{/*</Link>*/}
 				<style jsx>{`
           .bold {
             font-weight: bold;
@@ -143,6 +150,9 @@ const Header: React.FC = () => {
           a + a {
             margin-left: 1rem;
           }
+          
+
+          
         `}</style>
 			</div>
 		);
@@ -165,7 +175,7 @@ const Header: React.FC = () => {
             color: var(--geist-foreground);
             display: inline-block;
           }
-
+          
           p {
             display: inline-block;
             font-size: 13px;
@@ -188,7 +198,12 @@ const Header: React.FC = () => {
 
           button {
             border: none;
+            background: #fff;
+            border-radius: 3px;
           }
+          
+
+          
         `}</style>
 			</div>
 		);
