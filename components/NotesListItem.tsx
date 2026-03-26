@@ -1,6 +1,6 @@
 import React, { ReactNode, useState, useRef } from 'react';
 import { useKeyPress } from '@/lib/useKeyPress';
-import { getFamily } from '@/components/NotesList';
+import { getFamily } from '@/lib/notesTree';
 import styles from '@/components/NotesListItem.module.scss';
 import { useNotes } from '@/components/NotesContext';
 

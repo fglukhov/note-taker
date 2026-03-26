@@ -1,9 +1,10 @@
 import React, { ReactNode, useRef, useState } from 'react';
 import { GetServerSideProps } from 'next';
 import Layout from '@/components/Layout';
-import NotesList, { getFamily } from '@/components/NotesList';
+import NotesList from '@/components/NotesList';
 import { NotesListItemProps } from '@/components/NotesListItem';
 import prisma from '@/lib/prisma';
+import { getFamily } from '@/lib/notesTree';
 import { getSession } from 'next-auth/react';
 import { NotesProvider } from '@/components/NotesContext';
 
