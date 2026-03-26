@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import NotesListItem from './NotesListItem';
-import { NotesProvider } from './NotesContext';
-import { NotesListItemProps } from './NotesListItem';
-import { useKeyPress } from '../lib/useKeyPress';
-import styles from './NotesList.module.scss';
+import NotesListItem from '@/components/NotesListItem';
+import { NotesProvider } from '@/components/NotesContext';
+import { NotesListItemProps } from '@/components/NotesListItem';
+import { useKeyPress } from '@/lib/useKeyPress';
+import styles from '@/components/NotesList.module.scss';
 import Router from 'next/router';
 
 // TODO привести в порядок типы
@@ -292,6 +292,7 @@ const NotesList: React.FC<Props> = (props) => {
       reorderCallback();
       reorderTimeoutRef.current = null;
     }, 800);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isChanged, notesFeed]);
 
   useEffect(() => {
