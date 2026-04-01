@@ -66,15 +66,32 @@ const NoteExpanded: React.FC<NoteProps> = (props) => {
 
   const [modalIsOpen, setIsOpen] = React.useState(true);
 
-  function closeModal() {
-    router.push('/');
-    //setIsOpen(false);
-  }
+  const normalizeContent = (value: string | null | undefined): string => {
+    const raw = value ?? '';
+    return raw.trim().length > 0 ? raw : '';
+  };
+
+  const saveAndExit = async () => {
+    try {
+      if (isEditUI && userHasValidSession && noteBelongsToUser) {
+        const body = { title, content: normalizeContent(content) };
+        await fetch(`/api/edit/${props.id}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+      }
+    } catch (error) {
+      console.error(error);
+    } finally {
+      router.push('/');
+    }
+  };
 
   const editData = async (e: React.SyntheticEvent) => {
     e.preventDefault();
     try {
-      const body = { title, content };
+      const body = { title, content: normalizeContent(content) };
       await fetch(`/api/edit/${props.id}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -115,11 +132,11 @@ const NoteExpanded: React.FC<NoteProps> = (props) => {
     <Layout>
       <Modal
         isOpen={modalIsOpen} // The modal should always be shown on page load, it is the 'page'
-        onRequestClose={closeModal}
+        onRequestClose={saveAndExit}
         contentLabel={title}
         shouldFocusAfterRender={false}
       >
-        <button onClick={closeModal}>close</button>
+        <button onClick={saveAndExit}>close</button>
 
         {isEditUI ? (
           <form onSubmit={editData}>
