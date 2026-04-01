@@ -96,6 +96,10 @@ const NoteExpanded: React.FC<NoteProps> = (props) => {
 
   const saveAndExit = () => {
     const canSave = isEditUI && userHasValidSession && noteBelongsToUser;
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('notes:last-focus-id', String(props.id));
+    }
+
     if (!canSave) {
       router.push('/');
       return;

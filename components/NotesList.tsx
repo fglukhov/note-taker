@@ -303,6 +303,46 @@ const NotesList: React.FC<Props> = (props) => {
     isChangedRef.current = isChanged;
   }, [isChanged]);
 
+  const findPositionById = (targetId: string): number | null => {
+    let position = 0;
+
+    const visit = (parentKey: string): number | null => {
+      const children = notesFeed.filter(
+        (n) => (n.parentId ?? 'root') === parentKey,
+      );
+
+      for (const note of children) {
+        if (note.id === targetId) {
+          return position;
+        }
+
+        position += 1;
+        const found = visit(note.id);
+        if (found !== null) {
+          return found;
+        }
+      }
+
+      return null;
+    };
+
+    return visit('root');
+  };
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const lastFocusId = sessionStorage.getItem('notes:last-focus-id');
+    if (!lastFocusId) return;
+
+    const restoredPosition = findPositionById(lastFocusId);
+    if (restoredPosition !== null) {
+      setCursorPosition(restoredPosition);
+    }
+
+    sessionStorage.removeItem('notes:last-focus-id');
+  }, [notesFeed]);
+
   const clearPendingUpdateTimeout = () => {
     if (updateTimeout) {
       clearTimeout(updateTimeout);
