@@ -3,6 +3,7 @@ import { useKeyPress } from '@/lib/useKeyPress';
 import { getFamily } from '@/lib/notesTree';
 import styles from '@/components/NotesListItem.module.scss';
 import { useNotes } from '@/components/NotesContext';
+import Router from 'next/router';
 
 import { ChevronDown, FileText } from 'react-feather';
 
@@ -44,6 +45,7 @@ export type NotesListItemProps = {
     familyCount: number,
     collapsed?: boolean,
   ) => void;
+  onToggleCollapse?: (noteId: string) => void;
 };
 
 const NotesListItem: React.FC<NotesListItemProps> = (props) => {
@@ -156,13 +158,25 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
             <div className={styles.notes_list_item_title}>
               {/*<span style={{color: "red", fontSize: "12px",}}>{props.position + ": "}</span>*/}
               {props.familyCount > 1 && (
-                <div className={styles.notes_list_item_arrow}>
+                <div
+                  className={styles.notes_list_item_arrow}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    props.onToggleCollapse?.(id);
+                  }}
+                >
                   <ChevronDown size={24} />
                 </div>
               )}
               {title}
               {props.hasContent && (
-                <div className={styles.notes_list_item_content_icon}>
+                <div
+                  className={styles.notes_list_item_content_icon}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    Router.push('/n/[id]', `/n/${id}`);
+                  }}
+                >
                   <FileText size={16} />
                 </div>
               )}
@@ -184,7 +198,7 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
                     }
                     editTitle(e).then(() => {});
                   } else {
-                    // TODO консоль выдает 'Form submission canceled because the form is not connected'
+                    // TODO console shows 'Form submission canceled because the form is not connected'
 
                     props.onDelete(id, parentId, sort);
                   }
@@ -248,6 +262,7 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
             onDelete={props.onDelete}
             isNew={childNote.isNew}
             registerCollapsedRange={props.registerCollapsedRange}
+            onToggleCollapse={props.onToggleCollapse}
           />
         );
       })}
