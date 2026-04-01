@@ -20,16 +20,17 @@ model Post {
 }
 
 model Note {
-  id        String   @id @default(cuid())
-  title     String
-  content   String?
-  author    User?    @relation(fields: [authorId], references: [id])
-  authorId  String?
-  createdAt DateTime @default(now())
-  sort      Int      @default(1)
-  parentId  String?
-  complete  Boolean  @default(false)
-  collapsed Boolean  @default(false)
+  id         String   @id @default(cuid())
+  title      String
+  content    String?
+  hasContent Boolean  @default(false)
+  author     User?    @relation(fields: [authorId], references: [id])
+  authorId   String?
+  createdAt  DateTime @default(now())
+  sort       Int      @default(1)
+  parentId   String?
+  complete   Boolean  @default(false)
+  collapsed  Boolean  @default(false)
 }
 
 model Account {
