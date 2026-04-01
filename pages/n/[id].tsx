@@ -61,6 +61,7 @@ const NoteExpanded: React.FC<NoteProps> = (props) => {
 
   const [title, setTitle] = useState(props.title);
   const [content, setContent] = useState(props.content);
+  const draftKey = `note-draft:${props.id}`;
 
   const [isEdit, setIsEdit] = useState(false);
 
@@ -71,32 +72,56 @@ const NoteExpanded: React.FC<NoteProps> = (props) => {
     return raw.trim().length > 0 ? raw : '';
   };
 
-  const saveAndExit = async () => {
-    try {
-      if (isEditUI && userHasValidSession && noteBelongsToUser) {
-        const body = { title, content: normalizeContent(content) };
-        await fetch(`/api/edit/${props.id}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body),
-        });
-      }
-    } catch (error) {
-      console.error(error);
-    } finally {
+  const persistDraft = (draftTitle: string, draftContent: string) => {
+    if (typeof window === 'undefined') return;
+    localStorage.setItem(
+      draftKey,
+      JSON.stringify({ title: draftTitle, content: draftContent }),
+    );
+  };
+
+  const clearDraft = () => {
+    if (typeof window === 'undefined') return;
+    localStorage.removeItem(draftKey);
+  };
+
+  const saveNote = async (draftTitle: string, draftContent: string) => {
+    const body = { title: draftTitle, content: normalizeContent(draftContent) };
+    await fetch(`/api/edit/${props.id}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+  };
+
+  const saveAndExit = () => {
+    const canSave = isEditUI && userHasValidSession && noteBelongsToUser;
+    if (!canSave) {
       router.push('/');
+      return;
     }
+
+    const draftTitle = title;
+    const draftContent = content ?? '';
+    persistDraft(draftTitle, draftContent);
+
+    // Optimistic close: navigate immediately, save in background.
+    router.push('/');
+    void saveNote(draftTitle, draftContent)
+      .then(() => {
+        clearDraft();
+      })
+      .catch((error) => {
+        console.error(error);
+      });
   };
 
   const editData = async (e: React.SyntheticEvent) => {
     e.preventDefault();
     try {
       const body = { title, content: normalizeContent(content) };
-      await fetch(`/api/edit/${props.id}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
+      await saveNote(body.title, body.content);
+      clearDraft();
       setIsEdit(false);
       //await Router.push('/drafts');
     } catch (error) {
@@ -123,6 +148,27 @@ const NoteExpanded: React.FC<NoteProps> = (props) => {
       setDidAutoEnterEdit(true);
     }
   }, [shouldAutoEnterEdit]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const rawDraft = localStorage.getItem(draftKey);
+    if (!rawDraft) return;
+
+    try {
+      const parsed = JSON.parse(rawDraft) as {
+        title?: string;
+        content?: string;
+      };
+      if (typeof parsed.title === 'string') {
+        setTitle(parsed.title);
+      }
+      if (typeof parsed.content === 'string') {
+        setContent(parsed.content);
+      }
+    } catch {
+      // Ignore malformed draft data.
+    }
+  }, [draftKey]);
 
   if (status === 'loading') {
     return <div>Authenticating ...</div>;
