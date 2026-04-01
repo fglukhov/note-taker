@@ -4,11 +4,12 @@ import { getFamily } from '@/lib/notesTree';
 import styles from '@/components/NotesListItem.module.scss';
 import { useNotes } from '@/components/NotesContext';
 
-import { ChevronDown } from 'react-feather';
+import { ChevronDown, FileText } from 'react-feather';
 
 export type NotesListItemProps = {
   id: string;
   title: string;
+  hasContent?: boolean;
   sort?: number;
   familyCount?: number;
   position?: number;
@@ -160,6 +161,11 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
                 </div>
               )}
               {title}
+              {props.hasContent && (
+                <div className={styles.notes_list_item_content_icon}>
+                  <FileText size={16} />
+                </div>
+              )}
             </div>
           </>
         ) : (
@@ -227,6 +233,7 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
             position={position}
             familyCount={familyCount}
             title={childNote.title}
+            hasContent={childNote.hasContent}
             complete={childNote.complete}
             collapsed={childNote.collapsed}
             parentId={childNote.parentId}

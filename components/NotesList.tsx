@@ -909,6 +909,7 @@ const NotesList: React.FC<Props> = (props) => {
                     position={position}
                     familyCount={familyCount}
                     title={note.title}
+                    hasContent={note.hasContent}
                     complete={note.complete}
                     collapsed={note.collapsed}
                     parentId={note.parentId}

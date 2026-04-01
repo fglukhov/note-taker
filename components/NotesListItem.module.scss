@@ -63,6 +63,7 @@
 
 .notes_list_item_title {
 	position: relative;
+	padding-right: 24px;
 }
 
 .notes_list_item_arrow {
@@ -75,6 +76,17 @@
 	justify-content: center;
 	align-items: center;
 	transition: all .15s ease;
+}
+
+.notes_list_item_content_icon {
+	width: 16px;
+	height: 16px;
+	position: absolute;
+	right: 0;
+	top: 3px;
+	display: flex;
+	justify-content: center;
+	align-items: center;
 }
 
 .collapsed > .notes_list_item_title_wrapper .notes_list_item_arrow {

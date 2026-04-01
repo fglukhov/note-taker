@@ -36,6 +36,8 @@ export default async function handle(req, res) {
       data: {
         title,
         content: content != null ? content : undefined,
+        hasContent:
+          content != null ? String(content).trim().length > 0 : undefined,
       },
     });
 
