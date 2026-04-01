@@ -2792,10 +2792,12 @@ export namespace Prisma {
 
   export type NoteAvgAggregateOutputType = {
     sort: number | null;
+    priority: number | null;
   };
 
   export type NoteSumAggregateOutputType = {
     sort: number | null;
+    priority: number | null;
   };
 
   export type NoteMinAggregateOutputType = {
@@ -2806,6 +2808,8 @@ export namespace Prisma {
     authorId: string | null;
     createdAt: Date | null;
     sort: number | null;
+    priority: number | null;
+    isBold: boolean | null;
     parentId: string | null;
     complete: boolean | null;
     collapsed: boolean | null;
@@ -2819,6 +2823,8 @@ export namespace Prisma {
     authorId: string | null;
     createdAt: Date | null;
     sort: number | null;
+    priority: number | null;
+    isBold: boolean | null;
     parentId: string | null;
     complete: boolean | null;
     collapsed: boolean | null;
@@ -2832,6 +2838,8 @@ export namespace Prisma {
     authorId: number;
     createdAt: number;
     sort: number;
+    priority: number;
+    isBold: number;
     parentId: number;
     complete: number;
     collapsed: number;
@@ -2840,10 +2848,12 @@ export namespace Prisma {
 
   export type NoteAvgAggregateInputType = {
     sort?: true;
+    priority?: true;
   };
 
   export type NoteSumAggregateInputType = {
     sort?: true;
+    priority?: true;
   };
 
   export type NoteMinAggregateInputType = {
@@ -2854,6 +2864,8 @@ export namespace Prisma {
     authorId?: true;
     createdAt?: true;
     sort?: true;
+    priority?: true;
+    isBold?: true;
     parentId?: true;
     complete?: true;
     collapsed?: true;
@@ -2867,6 +2879,8 @@ export namespace Prisma {
     authorId?: true;
     createdAt?: true;
     sort?: true;
+    priority?: true;
+    isBold?: true;
     parentId?: true;
     complete?: true;
     collapsed?: true;
@@ -2880,6 +2894,8 @@ export namespace Prisma {
     authorId?: true;
     createdAt?: true;
     sort?: true;
+    priority?: true;
+    isBold?: true;
     parentId?: true;
     complete?: true;
     collapsed?: true;
@@ -2983,6 +2999,8 @@ export namespace Prisma {
     authorId: string | null;
     createdAt: Date;
     sort: number;
+    priority: number | null;
+    isBold: boolean;
     parentId: string | null;
     complete: boolean;
     collapsed: boolean;
@@ -3016,6 +3034,8 @@ export namespace Prisma {
       authorId?: boolean;
       createdAt?: boolean;
       sort?: boolean;
+      priority?: boolean;
+      isBold?: boolean;
       parentId?: boolean;
       complete?: boolean;
       collapsed?: boolean;
@@ -3035,6 +3055,8 @@ export namespace Prisma {
       authorId?: boolean;
       createdAt?: boolean;
       sort?: boolean;
+      priority?: boolean;
+      isBold?: boolean;
       parentId?: boolean;
       complete?: boolean;
       collapsed?: boolean;
@@ -3054,6 +3076,8 @@ export namespace Prisma {
       authorId?: boolean;
       createdAt?: boolean;
       sort?: boolean;
+      priority?: boolean;
+      isBold?: boolean;
       parentId?: boolean;
       complete?: boolean;
       collapsed?: boolean;
@@ -3070,6 +3094,8 @@ export namespace Prisma {
     authorId?: boolean;
     createdAt?: boolean;
     sort?: boolean;
+    priority?: boolean;
+    isBold?: boolean;
     parentId?: boolean;
     complete?: boolean;
     collapsed?: boolean;
@@ -3085,6 +3111,8 @@ export namespace Prisma {
     | 'authorId'
     | 'createdAt'
     | 'sort'
+    | 'priority'
+    | 'isBold'
     | 'parentId'
     | 'complete'
     | 'collapsed',
@@ -3122,6 +3150,8 @@ export namespace Prisma {
         authorId: string | null;
         createdAt: Date;
         sort: number;
+        priority: number | null;
+        isBold: boolean;
         parentId: string | null;
         complete: boolean;
         collapsed: boolean;
@@ -3730,6 +3760,8 @@ export namespace Prisma {
     readonly authorId: FieldRef<'Note', 'String'>;
     readonly createdAt: FieldRef<'Note', 'DateTime'>;
     readonly sort: FieldRef<'Note', 'Int'>;
+    readonly priority: FieldRef<'Note', 'Int'>;
+    readonly isBold: FieldRef<'Note', 'Boolean'>;
     readonly parentId: FieldRef<'Note', 'String'>;
     readonly complete: FieldRef<'Note', 'Boolean'>;
     readonly collapsed: FieldRef<'Note', 'Boolean'>;
@@ -9666,6 +9698,8 @@ export namespace Prisma {
     authorId: 'authorId';
     createdAt: 'createdAt';
     sort: 'sort';
+    priority: 'priority';
+    isBold: 'isBold';
     parentId: 'parentId';
     complete: 'complete';
     collapsed: 'collapsed';
@@ -9900,6 +9934,8 @@ export namespace Prisma {
     authorId?: StringNullableFilter<'Note'> | string | null;
     createdAt?: DateTimeFilter<'Note'> | Date | string;
     sort?: IntFilter<'Note'> | number;
+    priority?: IntNullableFilter<'Note'> | number | null;
+    isBold?: BoolFilter<'Note'> | boolean;
     parentId?: StringNullableFilter<'Note'> | string | null;
     complete?: BoolFilter<'Note'> | boolean;
     collapsed?: BoolFilter<'Note'> | boolean;
@@ -9914,6 +9950,8 @@ export namespace Prisma {
     authorId?: SortOrderInput | SortOrder;
     createdAt?: SortOrder;
     sort?: SortOrder;
+    priority?: SortOrderInput | SortOrder;
+    isBold?: SortOrder;
     parentId?: SortOrderInput | SortOrder;
     complete?: SortOrder;
     collapsed?: SortOrder;
@@ -9932,6 +9970,8 @@ export namespace Prisma {
       authorId?: StringNullableFilter<'Note'> | string | null;
       createdAt?: DateTimeFilter<'Note'> | Date | string;
       sort?: IntFilter<'Note'> | number;
+      priority?: IntNullableFilter<'Note'> | number | null;
+      isBold?: BoolFilter<'Note'> | boolean;
       parentId?: StringNullableFilter<'Note'> | string | null;
       complete?: BoolFilter<'Note'> | boolean;
       collapsed?: BoolFilter<'Note'> | boolean;
@@ -9948,6 +9988,8 @@ export namespace Prisma {
     authorId?: SortOrderInput | SortOrder;
     createdAt?: SortOrder;
     sort?: SortOrder;
+    priority?: SortOrderInput | SortOrder;
+    isBold?: SortOrder;
     parentId?: SortOrderInput | SortOrder;
     complete?: SortOrder;
     collapsed?: SortOrder;
@@ -9973,6 +10015,8 @@ export namespace Prisma {
     authorId?: StringNullableWithAggregatesFilter<'Note'> | string | null;
     createdAt?: DateTimeWithAggregatesFilter<'Note'> | Date | string;
     sort?: IntWithAggregatesFilter<'Note'> | number;
+    priority?: IntNullableWithAggregatesFilter<'Note'> | number | null;
+    isBold?: BoolWithAggregatesFilter<'Note'> | boolean;
     parentId?: StringNullableWithAggregatesFilter<'Note'> | string | null;
     complete?: BoolWithAggregatesFilter<'Note'> | boolean;
     collapsed?: BoolWithAggregatesFilter<'Note'> | boolean;
@@ -10354,6 +10398,8 @@ export namespace Prisma {
     hasContent?: boolean;
     createdAt?: Date | string;
     sort?: number;
+    priority?: number | null;
+    isBold?: boolean;
     parentId?: string | null;
     complete?: boolean;
     collapsed?: boolean;
@@ -10368,6 +10414,8 @@ export namespace Prisma {
     authorId?: string | null;
     createdAt?: Date | string;
     sort?: number;
+    priority?: number | null;
+    isBold?: boolean;
     parentId?: string | null;
     complete?: boolean;
     collapsed?: boolean;
@@ -10380,6 +10428,8 @@ export namespace Prisma {
     hasContent?: BoolFieldUpdateOperationsInput | boolean;
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string;
     sort?: IntFieldUpdateOperationsInput | number;
+    priority?: NullableIntFieldUpdateOperationsInput | number | null;
+    isBold?: BoolFieldUpdateOperationsInput | boolean;
     parentId?: NullableStringFieldUpdateOperationsInput | string | null;
     complete?: BoolFieldUpdateOperationsInput | boolean;
     collapsed?: BoolFieldUpdateOperationsInput | boolean;
@@ -10394,6 +10444,8 @@ export namespace Prisma {
     authorId?: NullableStringFieldUpdateOperationsInput | string | null;
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string;
     sort?: IntFieldUpdateOperationsInput | number;
+    priority?: NullableIntFieldUpdateOperationsInput | number | null;
+    isBold?: BoolFieldUpdateOperationsInput | boolean;
     parentId?: NullableStringFieldUpdateOperationsInput | string | null;
     complete?: BoolFieldUpdateOperationsInput | boolean;
     collapsed?: BoolFieldUpdateOperationsInput | boolean;
@@ -10407,6 +10459,8 @@ export namespace Prisma {
     authorId?: string | null;
     createdAt?: Date | string;
     sort?: number;
+    priority?: number | null;
+    isBold?: boolean;
     parentId?: string | null;
     complete?: boolean;
     collapsed?: boolean;
@@ -10419,6 +10473,8 @@ export namespace Prisma {
     hasContent?: BoolFieldUpdateOperationsInput | boolean;
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string;
     sort?: IntFieldUpdateOperationsInput | number;
+    priority?: NullableIntFieldUpdateOperationsInput | number | null;
+    isBold?: BoolFieldUpdateOperationsInput | boolean;
     parentId?: NullableStringFieldUpdateOperationsInput | string | null;
     complete?: BoolFieldUpdateOperationsInput | boolean;
     collapsed?: BoolFieldUpdateOperationsInput | boolean;
@@ -10432,6 +10488,8 @@ export namespace Prisma {
     authorId?: NullableStringFieldUpdateOperationsInput | string | null;
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string;
     sort?: IntFieldUpdateOperationsInput | number;
+    priority?: NullableIntFieldUpdateOperationsInput | number | null;
+    isBold?: BoolFieldUpdateOperationsInput | boolean;
     parentId?: NullableStringFieldUpdateOperationsInput | string | null;
     complete?: BoolFieldUpdateOperationsInput | boolean;
     collapsed?: BoolFieldUpdateOperationsInput | boolean;
@@ -10897,6 +10955,17 @@ export namespace Prisma {
     not?: NestedIntFilter<$PrismaModel> | number;
   };
 
+  export type IntNullableFilter<$PrismaModel = never> = {
+    equals?: number | IntFieldRefInput<$PrismaModel> | null;
+    in?: number[] | ListIntFieldRefInput<$PrismaModel> | null;
+    notIn?: number[] | ListIntFieldRefInput<$PrismaModel> | null;
+    lt?: number | IntFieldRefInput<$PrismaModel>;
+    lte?: number | IntFieldRefInput<$PrismaModel>;
+    gt?: number | IntFieldRefInput<$PrismaModel>;
+    gte?: number | IntFieldRefInput<$PrismaModel>;
+    not?: NestedIntNullableFilter<$PrismaModel> | number | null;
+  };
+
   export type NoteCountOrderByAggregateInput = {
     id?: SortOrder;
     title?: SortOrder;
@@ -10905,6 +10974,8 @@ export namespace Prisma {
     authorId?: SortOrder;
     createdAt?: SortOrder;
     sort?: SortOrder;
+    priority?: SortOrder;
+    isBold?: SortOrder;
     parentId?: SortOrder;
     complete?: SortOrder;
     collapsed?: SortOrder;
@@ -10912,6 +10983,7 @@ export namespace Prisma {
 
   export type NoteAvgOrderByAggregateInput = {
     sort?: SortOrder;
+    priority?: SortOrder;
   };
 
   export type NoteMaxOrderByAggregateInput = {
@@ -10922,6 +10994,8 @@ export namespace Prisma {
     authorId?: SortOrder;
     createdAt?: SortOrder;
     sort?: SortOrder;
+    priority?: SortOrder;
+    isBold?: SortOrder;
     parentId?: SortOrder;
     complete?: SortOrder;
     collapsed?: SortOrder;
@@ -10935,6 +11009,8 @@ export namespace Prisma {
     authorId?: SortOrder;
     createdAt?: SortOrder;
     sort?: SortOrder;
+    priority?: SortOrder;
+    isBold?: SortOrder;
     parentId?: SortOrder;
     complete?: SortOrder;
     collapsed?: SortOrder;
@@ -10942,6 +11018,7 @@ export namespace Prisma {
 
   export type NoteSumOrderByAggregateInput = {
     sort?: SortOrder;
+    priority?: SortOrder;
   };
 
   export type DateTimeWithAggregatesFilter<$PrismaModel = never> = {
@@ -10974,7 +11051,7 @@ export namespace Prisma {
     _max?: NestedIntFilter<$PrismaModel>;
   };
 
-  export type IntNullableFilter<$PrismaModel = never> = {
+  export type IntNullableWithAggregatesFilter<$PrismaModel = never> = {
     equals?: number | IntFieldRefInput<$PrismaModel> | null;
     in?: number[] | ListIntFieldRefInput<$PrismaModel> | null;
     notIn?: number[] | ListIntFieldRefInput<$PrismaModel> | null;
@@ -10982,7 +11059,12 @@ export namespace Prisma {
     lte?: number | IntFieldRefInput<$PrismaModel>;
     gt?: number | IntFieldRefInput<$PrismaModel>;
     gte?: number | IntFieldRefInput<$PrismaModel>;
-    not?: NestedIntNullableFilter<$PrismaModel> | number | null;
+    not?: NestedIntNullableWithAggregatesFilter<$PrismaModel> | number | null;
+    _count?: NestedIntNullableFilter<$PrismaModel>;
+    _avg?: NestedFloatNullableFilter<$PrismaModel>;
+    _sum?: NestedIntNullableFilter<$PrismaModel>;
+    _min?: NestedIntNullableFilter<$PrismaModel>;
+    _max?: NestedIntNullableFilter<$PrismaModel>;
   };
 
   export type UserScalarRelationFilter = {
@@ -11052,22 +11134,6 @@ export namespace Prisma {
 
   export type AccountSumOrderByAggregateInput = {
     expires_at?: SortOrder;
-  };
-
-  export type IntNullableWithAggregatesFilter<$PrismaModel = never> = {
-    equals?: number | IntFieldRefInput<$PrismaModel> | null;
-    in?: number[] | ListIntFieldRefInput<$PrismaModel> | null;
-    notIn?: number[] | ListIntFieldRefInput<$PrismaModel> | null;
-    lt?: number | IntFieldRefInput<$PrismaModel>;
-    lte?: number | IntFieldRefInput<$PrismaModel>;
-    gt?: number | IntFieldRefInput<$PrismaModel>;
-    gte?: number | IntFieldRefInput<$PrismaModel>;
-    not?: NestedIntNullableWithAggregatesFilter<$PrismaModel> | number | null;
-    _count?: NestedIntNullableFilter<$PrismaModel>;
-    _avg?: NestedFloatNullableFilter<$PrismaModel>;
-    _sum?: NestedIntNullableFilter<$PrismaModel>;
-    _min?: NestedIntNullableFilter<$PrismaModel>;
-    _max?: NestedIntNullableFilter<$PrismaModel>;
   };
 
   export type SessionCountOrderByAggregateInput = {
@@ -11274,6 +11340,14 @@ export namespace Prisma {
     divide?: number;
   };
 
+  export type NullableIntFieldUpdateOperationsInput = {
+    set?: number | null;
+    increment?: number;
+    decrement?: number;
+    multiply?: number;
+    divide?: number;
+  };
+
   export type UserUpdateOneWithoutNotesNestedInput = {
     create?: XOR<
       UserCreateWithoutNotesInput,
@@ -11300,14 +11374,6 @@ export namespace Prisma {
     >;
     connectOrCreate?: UserCreateOrConnectWithoutAccountsInput;
     connect?: UserWhereUniqueInput;
-  };
-
-  export type NullableIntFieldUpdateOperationsInput = {
-    set?: number | null;
-    increment?: number;
-    decrement?: number;
-    multiply?: number;
-    divide?: number;
   };
 
   export type UserUpdateOneRequiredWithoutAccountsNestedInput = {
@@ -12276,6 +12342,8 @@ export namespace Prisma {
     hasContent?: boolean;
     createdAt?: Date | string;
     sort?: number;
+    priority?: number | null;
+    isBold?: boolean;
     parentId?: string | null;
     complete?: boolean;
     collapsed?: boolean;
@@ -12288,6 +12356,8 @@ export namespace Prisma {
     hasContent?: boolean;
     createdAt?: Date | string;
     sort?: number;
+    priority?: number | null;
+    isBold?: boolean;
     parentId?: string | null;
     complete?: boolean;
     collapsed?: boolean;
@@ -12454,6 +12524,8 @@ export namespace Prisma {
     authorId?: StringNullableFilter<'Note'> | string | null;
     createdAt?: DateTimeFilter<'Note'> | Date | string;
     sort?: IntFilter<'Note'> | number;
+    priority?: IntNullableFilter<'Note'> | number | null;
+    isBold?: BoolFilter<'Note'> | boolean;
     parentId?: StringNullableFilter<'Note'> | string | null;
     complete?: BoolFilter<'Note'> | boolean;
     collapsed?: BoolFilter<'Note'> | boolean;
@@ -12559,6 +12631,8 @@ export namespace Prisma {
     hasContent?: boolean;
     createdAt?: Date | string;
     sort?: number;
+    priority?: number | null;
+    isBold?: boolean;
     parentId?: string | null;
     complete?: boolean;
     collapsed?: boolean;
@@ -12614,6 +12688,8 @@ export namespace Prisma {
     hasContent?: BoolFieldUpdateOperationsInput | boolean;
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string;
     sort?: IntFieldUpdateOperationsInput | number;
+    priority?: NullableIntFieldUpdateOperationsInput | number | null;
+    isBold?: BoolFieldUpdateOperationsInput | boolean;
     parentId?: NullableStringFieldUpdateOperationsInput | string | null;
     complete?: BoolFieldUpdateOperationsInput | boolean;
     collapsed?: BoolFieldUpdateOperationsInput | boolean;
@@ -12626,6 +12702,8 @@ export namespace Prisma {
     hasContent?: BoolFieldUpdateOperationsInput | boolean;
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string;
     sort?: IntFieldUpdateOperationsInput | number;
+    priority?: NullableIntFieldUpdateOperationsInput | number | null;
+    isBold?: BoolFieldUpdateOperationsInput | boolean;
     parentId?: NullableStringFieldUpdateOperationsInput | string | null;
     complete?: BoolFieldUpdateOperationsInput | boolean;
     collapsed?: BoolFieldUpdateOperationsInput | boolean;
@@ -12638,6 +12716,8 @@ export namespace Prisma {
     hasContent?: BoolFieldUpdateOperationsInput | boolean;
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string;
     sort?: IntFieldUpdateOperationsInput | number;
+    priority?: NullableIntFieldUpdateOperationsInput | number | null;
+    isBold?: BoolFieldUpdateOperationsInput | boolean;
     parentId?: NullableStringFieldUpdateOperationsInput | string | null;
     complete?: BoolFieldUpdateOperationsInput | boolean;
     collapsed?: BoolFieldUpdateOperationsInput | boolean;

@@ -31,6 +31,8 @@ model Note {
   authorId  String?
   createdAt DateTime @default(now())
   sort      Int      @default(1)
+  priority  Int?
+  isBold    Boolean  @default(false)
   parentId  String?
   complete  Boolean  @default(false)
   collapsed  Boolean  @default(false)

@@ -1,4 +1,10 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useMemo,
+  useCallback,
+} from 'react';
 import NotesListItem from '@/components/NotesListItem';
 import { NotesProvider } from '@/components/NotesContext';
 import { NotesListItemProps } from '@/components/NotesListItem';
@@ -249,6 +255,8 @@ const NotesList: React.FC<Props> = (props) => {
     let newNote: NotesListItemProps = {
       id: newId,
       title: '',
+      priority: null,
+      isBold: false,
       sort: newSort,
       //position: insertAt,
       isNew: true,
@@ -303,31 +311,34 @@ const NotesList: React.FC<Props> = (props) => {
     isChangedRef.current = isChanged;
   }, [isChanged]);
 
-  const findPositionById = (targetId: string): number | null => {
-    let position = 0;
+  const findPositionById = useCallback(
+    (targetId: string): number | null => {
+      let position = 0;
 
-    const visit = (parentKey: string): number | null => {
-      const children = notesFeed.filter(
-        (n) => (n.parentId ?? 'root') === parentKey,
-      );
+      const visit = (parentKey: string): number | null => {
+        const children = notesFeed.filter(
+          (n) => (n.parentId ?? 'root') === parentKey,
+        );
 
-      for (const note of children) {
-        if (note.id === targetId) {
-          return position;
+        for (const note of children) {
+          if (note.id === targetId) {
+            return position;
+          }
+
+          position += 1;
+          const found = visit(note.id);
+          if (found !== null) {
+            return found;
+          }
         }
 
-        position += 1;
-        const found = visit(note.id);
-        if (found !== null) {
-          return found;
-        }
-      }
+        return null;
+      };
 
-      return null;
-    };
-
-    return visit('root');
-  };
+      return visit('root');
+    },
+    [notesFeed],
+  );
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -341,7 +352,7 @@ const NotesList: React.FC<Props> = (props) => {
     }
 
     sessionStorage.removeItem('notes:last-focus-id');
-  }, [notesFeed]);
+  }, [notesFeed, findPositionById]);
 
   const clearPendingUpdateTimeout = () => {
     if (updateTimeout) {
@@ -758,8 +769,94 @@ const NotesList: React.FC<Props> = (props) => {
     }
   };
 
+  const handlePriorityShortcut = (event: KeyboardEvent) => {
+    const priorityByCode: Record<string, number> = {
+      Digit1: 1,
+      Numpad1: 1,
+      Digit2: 2,
+      Numpad2: 2,
+      Digit3: 3,
+      Numpad3: 3,
+    };
+    const nextPriority = priorityByCode[event.code];
+    if (!nextPriority) {
+      return;
+    }
+
+    const curNote = notesFeed.find((n) => n.id == focusId.current);
+    if (!curNote) {
+      return;
+    }
+
+    event.preventDefault();
+    clearPendingUpdateTimeout();
+
+    const updatedPriority =
+      curNote.priority === nextPriority ? null : nextPriority;
+    const newFeed = notesFeed.map((n) => {
+      if (n.id !== curNote.id) {
+        return n;
+      }
+
+      if (!updatedIds.current.includes(n.id)) {
+        updatedIds.current.push(n.id);
+      }
+
+      return {
+        ...n,
+        priority: updatedPriority,
+      };
+    });
+
+    scheduleSyncUpdate();
+    syncFeed.current = newFeed;
+    setNotesFeed(newFeed);
+  };
+
+  const handleBoldShortcut = (event: KeyboardEvent, isCtrlCommand: boolean) => {
+    if (!(isCtrlCommand && eventKeyRef.current === 'KeyB')) {
+      return;
+    }
+
+    const curNote = notesFeed.find((n) => n.id == focusId.current);
+    if (!curNote) {
+      return;
+    }
+
+    event.preventDefault();
+    clearPendingUpdateTimeout();
+
+    const newFeed = notesFeed.map((n) => {
+      if (n.id !== curNote.id) {
+        return n;
+      }
+
+      if (!updatedIds.current.includes(n.id)) {
+        updatedIds.current.push(n.id);
+      }
+
+      return {
+        ...n,
+        isBold: !n.isBold,
+      };
+    });
+
+    scheduleSyncUpdate();
+    syncFeed.current = newFeed;
+    setNotesFeed(newFeed);
+  };
+
   const onKeyPress = (event: KeyboardEvent): void => {
     let isCtrlCommand = event.ctrlKey || event.metaKey;
+    const target = event.target as HTMLElement | null;
+    const isTypingTarget =
+      target?.tagName === 'INPUT' ||
+      target?.tagName === 'TEXTAREA' ||
+      target?.isContentEditable;
+
+    if (isTypingTarget) {
+      return;
+    }
 
     eventKeyRef.current = event.code;
 
@@ -779,6 +876,8 @@ const NotesList: React.FC<Props> = (props) => {
       handleComplete(event);
       handleDeleteShortcut();
       handleInsertShortcut(event);
+      handlePriorityShortcut(event);
+      handleBoldShortcut(event, isCtrlCommand);
     } else {
       // clearTimeout(timeout);
       // lastKeyRef.current = null;
@@ -854,6 +953,8 @@ const NotesList: React.FC<Props> = (props) => {
         {
           id: newId,
           title: '',
+          priority: null,
+          isBold: false,
           sort: curNote.sort + 1,
           //position: insertAt,
           isNew: true,
@@ -961,6 +1062,8 @@ const NotesList: React.FC<Props> = (props) => {
                     position={position}
                     familyCount={familyCount}
                     title={note.title}
+                    priority={note.priority}
+                    isBold={note.isBold}
                     hasContent={note.hasContent}
                     complete={note.complete}
                     collapsed={note.collapsed}

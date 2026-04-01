@@ -10,6 +10,8 @@ import { ChevronDown, FileText } from 'react-feather';
 export type NotesListItemProps = {
   id: string;
   title: string;
+  priority?: number | null;
+  isBold?: boolean;
   hasContent?: boolean;
   sort?: number;
   familyCount?: number;
@@ -60,7 +62,7 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
 
   const eventKeyRef = useRef<string | null>(null);
 
-  const notesFeed = useNotes() ?? [];
+  const notesFeed = (useNotes() ?? []) as NotesListItemProps[];
 
   const onElementRef = (node: HTMLDivElement | null): void => {
     if (node && props.isFocus) {
@@ -129,6 +131,14 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
   const childNotes = notesFeed.filter(
     (childNote) => childNote.parentId == props.id,
   );
+  const priorityClass =
+    props.priority === 1
+      ? styles.priority_1
+      : props.priority === 2
+        ? styles.priority_2
+        : props.priority === 3
+          ? styles.priority_3
+          : '';
 
   props.registerCollapsedRange?.(
     props.position,
@@ -168,7 +178,11 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
                   <ChevronDown size={24} />
                 </div>
               )}
-              {title}
+              <span
+                className={`${priorityClass} ${props.isBold ? styles.bold_text : ''}`}
+              >
+                {title}
+              </span>
               {props.hasContent && (
                 <div
                   className={styles.notes_list_item_content_icon}
@@ -247,6 +261,8 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
             position={position}
             familyCount={familyCount}
             title={childNote.title}
+            priority={childNote.priority}
+            isBold={childNote.isBold}
             hasContent={childNote.hasContent}
             complete={childNote.complete}
             collapsed={childNote.collapsed}
