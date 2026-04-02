@@ -86,6 +86,10 @@
 	color: $gray-color;
 }
 
+.notes_list_item.complete > .notes_list_item_title_wrapper .notes_list_item_title span {
+	color: $gray-color;
+}
+
 .notes_list_item_arrow {
 	width: 20px;
 	height: 20px;
