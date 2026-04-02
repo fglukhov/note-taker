@@ -53,10 +53,13 @@ const MarkdownDecorations = (
   selectionTo: number,
 ) => {
   const docLen = doc.length;
-  const first = docLen ? doc.charCodeAt(0) : 0;
-  const mid = docLen ? doc.charCodeAt(Math.floor(docLen / 2)) : 0;
-  const last = docLen ? doc.charCodeAt(docLen - 1) : 0;
-  const key = `${docLen}:${first}:${mid}:${last}:${selectionFrom}:${selectionTo}`;
+  // Small (fast) string hash to make the decoration cache sensitive to content.
+  // This prevents stale `.cm-md-heading-first/last` styles when the doc changes.
+  let docHash = 0;
+  for (let i = 0; i < docLen; i++) {
+    docHash = (docHash * 31 + doc.charCodeAt(i)) | 0;
+  }
+  const key = `${docLen}:${docHash >>> 0}:${selectionFrom}:${selectionTo}`;
   if (key === lastDecorationsKey) return lastDecorationsSet;
 
   const ranges: any[] = [];
@@ -219,6 +222,17 @@ const MarkdownDecorations = (
     const re = /^( {0,3})(#{1,6})[ \t]+(.+)$/gm;
     re.lastIndex = 0;
     let m: RegExpExecArray | null;
+    type HeadingDeco = {
+      contentStart: number;
+      contentEnd: number;
+      markerStart: number;
+      markerEnd: number;
+      level: number;
+      focused: boolean;
+    };
+
+    const headings: HeadingDeco[] = [];
+
     while ((m = re.exec(doc)) !== null) {
       const full = m[0];
       const start = m.index ?? 0;
@@ -228,6 +242,7 @@ const MarkdownDecorations = (
       const text = m[3] ?? '';
       if (!text) continue;
 
+      const level = hashes.length;
       const markerStart = start + indent.length;
       const textStartWithin = full.indexOf(text);
       if (textStartWithin < 0) continue;
@@ -236,9 +251,31 @@ const MarkdownDecorations = (
       const contentEnd = contentStart + text.length;
 
       const focused = overlapsRange(selFrom, selTo, start, start + full.length);
-      mark(contentStart, contentEnd, 'cm-md-heading');
-      if (!focused) hide(markerStart, markerEnd);
+      headings.push({
+        contentStart,
+        contentEnd,
+        markerStart,
+        markerEnd,
+        level,
+        focused,
+      });
     }
+
+    headings.forEach((h, idx) => {
+      const isFirst = idx === 0;
+      const isLast = idx === headings.length - 1;
+      const className = [
+        'cm-md-heading',
+        `cm-md-heading-level-${h.level}`,
+        isFirst ? 'cm-md-heading-first' : '',
+        isLast ? 'cm-md-heading-last' : '',
+      ]
+        .filter(Boolean)
+        .join(' ');
+
+      mark(h.contentStart, h.contentEnd, className);
+      if (!h.focused) hide(h.markerStart, h.markerEnd);
+    });
   }
 
   // Unordered lists: -, *, +
@@ -402,6 +439,14 @@ const MarkdownNoteEditorClient: React.FC<MarkdownNoteEditorProps> = ({
           {
             '&.cm-editor': {
               height: '250px',
+              // Match the list tasks font stack (see `NotesListItem.module.scss`).
+              fontFamily:
+                '-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto, Helvetica,Arial,sans-serif,"Apple Color Emoji","Segoe UI Emoji", "Segoe UI Symbol"',
+            },
+            // CodeMirror renders text inside scroller/content; ensure font is applied there too.
+            '& .cm-scroller, & .cm-content': {
+              fontFamily:
+                '-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto, Helvetica,Arial,sans-serif,"Apple Color Emoji","Segoe UI Emoji", "Segoe UI Symbol"',
             },
             '& .cm-md-hide': {
               color: 'transparent',
@@ -433,7 +478,47 @@ const MarkdownNoteEditorClient: React.FC<MarkdownNoteEditorProps> = ({
             },
             '& .cm-md-heading': {
               fontWeight: '700',
-              fontSize: '1.1em',
+              textDecoration: 'none',
+              display: 'inline-block',
+              padding: '0.45em 0',
+              lineHeight: '1.2',
+            },
+
+            '& .cm-md-heading-first': {
+              paddingTop: '0',
+            },
+
+            '& .cm-md-heading-last': {
+              paddingBottom: '0',
+            },
+
+            '& .cm-md-heading-level-1': {
+              fontSize: '1.65em',
+            },
+            '& .cm-md-heading-level-2': {
+              fontSize: '1.45em',
+            },
+            '& .cm-md-heading-level-3': {
+              fontSize: '1.30em',
+            },
+            '& .cm-md-heading-level-4': {
+              fontSize: '1.20em',
+            },
+            '& .cm-md-heading-level-5': {
+              fontSize: '1.12em',
+            },
+            '& .cm-md-heading-level-6': {
+              fontSize: '1.05em',
+            },
+            // CodeMirror generates some internal token classes with a non-Latin
+            // prefix. In DevTools they look like `.ͼ7` and may apply underline;
+            // override them so markdown headings render without underline.
+            '& .ͼ7': {
+              textDecoration: 'none',
+              fontWeight: '700',
+              display: 'inline-block',
+              padding: '0.15em 0',
+              lineHeight: '1.25',
             },
             '& .cm-md-list-item': {
               // Keep text style stable; bullet is rendered via widget.
