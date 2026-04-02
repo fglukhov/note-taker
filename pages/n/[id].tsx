@@ -61,25 +61,71 @@ const NoteExpanded: React.FC<NoteProps> = (props) => {
 
   const [title, setTitle] = useState(props.title);
   const [content, setContent] = useState(props.content);
+  const draftKey = `note-draft:${props.id}`;
 
   const [isEdit, setIsEdit] = useState(false);
 
   const [modalIsOpen, setIsOpen] = React.useState(true);
 
-  function closeModal() {
+  const normalizeContent = (value: string | null | undefined): string => {
+    const raw = value ?? '';
+    return raw.trim().length > 0 ? raw : '';
+  };
+
+  const persistDraft = (draftTitle: string, draftContent: string) => {
+    if (typeof window === 'undefined') return;
+    localStorage.setItem(
+      draftKey,
+      JSON.stringify({ title: draftTitle, content: draftContent }),
+    );
+  };
+
+  const clearDraft = () => {
+    if (typeof window === 'undefined') return;
+    localStorage.removeItem(draftKey);
+  };
+
+  const saveNote = async (draftTitle: string, draftContent: string) => {
+    const body = { title: draftTitle, content: normalizeContent(draftContent) };
+    await fetch(`/api/edit/${props.id}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+  };
+
+  const saveAndExit = () => {
+    const canSave = isEditUI && userHasValidSession && noteBelongsToUser;
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('notes:last-focus-id', String(props.id));
+    }
+
+    if (!canSave) {
+      router.push('/');
+      return;
+    }
+
+    const draftTitle = title;
+    const draftContent = content ?? '';
+    persistDraft(draftTitle, draftContent);
+
+    // Optimistic close: navigate immediately, save in background.
     router.push('/');
-    //setIsOpen(false);
-  }
+    void saveNote(draftTitle, draftContent)
+      .then(() => {
+        clearDraft();
+      })
+      .catch((error) => {
+        console.error(error);
+      });
+  };
 
   const editData = async (e: React.SyntheticEvent) => {
     e.preventDefault();
     try {
-      const body = { title, content };
-      await fetch(`/api/edit/${props.id}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
+      const body = { title, content: normalizeContent(content) };
+      await saveNote(body.title, body.content);
+      clearDraft();
       setIsEdit(false);
       //await Router.push('/drafts');
     } catch (error) {
@@ -107,6 +153,27 @@ const NoteExpanded: React.FC<NoteProps> = (props) => {
     }
   }, [shouldAutoEnterEdit]);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const rawDraft = localStorage.getItem(draftKey);
+    if (!rawDraft) return;
+
+    try {
+      const parsed = JSON.parse(rawDraft) as {
+        title?: string;
+        content?: string;
+      };
+      if (typeof parsed.title === 'string') {
+        setTitle(parsed.title);
+      }
+      if (typeof parsed.content === 'string') {
+        setContent(parsed.content);
+      }
+    } catch {
+      // Ignore malformed draft data.
+    }
+  }, [draftKey]);
+
   if (status === 'loading') {
     return <div>Authenticating ...</div>;
   }
@@ -115,11 +182,11 @@ const NoteExpanded: React.FC<NoteProps> = (props) => {
     <Layout>
       <Modal
         isOpen={modalIsOpen} // The modal should always be shown on page load, it is the 'page'
-        onRequestClose={closeModal}
+        onRequestClose={saveAndExit}
         contentLabel={title}
         shouldFocusAfterRender={false}
       >
-        <button onClick={closeModal}>close</button>
+        <button onClick={saveAndExit}>close</button>
 
         {isEditUI ? (
           <form onSubmit={editData}>

@@ -1,4 +1,10 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useMemo,
+  useCallback,
+} from 'react';
 import NotesListItem from '@/components/NotesListItem';
 import { NotesProvider } from '@/components/NotesContext';
 import { NotesListItemProps } from '@/components/NotesListItem';
@@ -8,9 +14,9 @@ import NotesHotkeysHints from '@/components/NotesHotkeysHints';
 import styles from '@/components/NotesList.module.scss';
 import Router from 'next/router';
 
-// TODO привести в порядок типы
-// TODO обновление страницы по cmd+R
-// TODO запоминаем текущую позицию при обновлении и скроллим к ней
+// TODO tidy up types
+// TODO handle page reload on cmd+R
+// TODO restore current position after reload and scroll to it
 
 type Props = {
   feed: NotesListItemProps[];
@@ -76,7 +82,7 @@ const NotesList: React.FC<Props> = (props) => {
   }, [notesFeed]);
 
   function reorderCallback() {
-    // TODO нехорошо, что заметки не синхронизируются при открытой форме, но в противном случае сбивается сортировка
+    // TODO notes are not synchronized while a form is open, but syncing breaks sorting
 
     if (isChanged && !isUpdating) {
       console.log('refresh');
@@ -88,7 +94,7 @@ const NotesList: React.FC<Props> = (props) => {
         .then(() => {
           setIsUpdating(false);
 
-          // если пока отправляли — появились новые изменения, отправим ещё раз
+          // If new changes appear while sending, send one more time.
           if (isChangedRef.current) {
             reorderCallback();
           }
@@ -98,7 +104,7 @@ const NotesList: React.FC<Props> = (props) => {
 
           setIsUpdating(false);
 
-          // можно тоже повторить попытку, если во время ошибки были изменения
+          // Retry as well if changes appeared while the request failed.
           if (isChangedRef.current) {
             reorderCallback();
           }
@@ -188,7 +194,7 @@ const NotesList: React.FC<Props> = (props) => {
       };
     }
 
-    // TODO вынести в функцию, которую вызывать и после сабмита, чтобы сразу добавлялась новая заметка
+    // TODO extract into a function and reuse after submit to instantly add a new note
 
     prevFocusId.current = focusId.current;
     prevCursorPosition.current = cursorPosition;
@@ -234,7 +240,7 @@ const NotesList: React.FC<Props> = (props) => {
       insertAt = 0;
     } else {
       if (insertChild) {
-        // Вложенный элемент всегда вставляется на следующую позицию за текущей
+        // A nested item is always inserted at the next position after current.
 
         insertAt = cursorPosition + 1;
       } else {
@@ -249,6 +255,8 @@ const NotesList: React.FC<Props> = (props) => {
     let newNote: NotesListItemProps = {
       id: newId,
       title: '',
+      priority: null,
+      isBold: false,
       sort: newSort,
       //position: insertAt,
       isNew: true,
@@ -275,7 +283,7 @@ const NotesList: React.FC<Props> = (props) => {
 
     newFeed.sort((a, b) => a.sort - b.sort);
 
-    // TODO подумать, как убрать этот таймаут. Он нужен для того, чтобы форма новой заметки сразу не отправлялась.
+    // TODO remove this timeout. It prevents the new note form from being submitted immediately.
 
     setTimeout(function () {
       setCursorPosition(insertAt);
@@ -287,7 +295,7 @@ const NotesList: React.FC<Props> = (props) => {
   useEffect(() => {
     if (!isChanged) return;
 
-    // если пользователь продолжает что-то делать — сбрасываем таймер
+    // If the user keeps interacting, reset the timer.
     if (reorderTimeoutRef.current) {
       clearTimeout(reorderTimeoutRef.current);
     }
@@ -303,10 +311,84 @@ const NotesList: React.FC<Props> = (props) => {
     isChangedRef.current = isChanged;
   }, [isChanged]);
 
+  const findPositionById = useCallback(
+    (targetId: string): number | null => {
+      let position = 0;
+
+      const visit = (parentKey: string): number | null => {
+        const children = notesFeed.filter(
+          (n) => (n.parentId ?? 'root') === parentKey,
+        );
+
+        for (const note of children) {
+          if (note.id === targetId) {
+            return position;
+          }
+
+          position += 1;
+          const found = visit(note.id);
+          if (found !== null) {
+            return found;
+          }
+        }
+
+        return null;
+      };
+
+      return visit('root');
+    },
+    [notesFeed],
+  );
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const lastFocusId = sessionStorage.getItem('notes:last-focus-id');
+    if (!lastFocusId) return;
+
+    const restoredPosition = findPositionById(lastFocusId);
+    if (restoredPosition !== null) {
+      setCursorPosition(restoredPosition);
+    }
+
+    sessionStorage.removeItem('notes:last-focus-id');
+  }, [notesFeed, findPositionById]);
+
   const clearPendingUpdateTimeout = () => {
     if (updateTimeout) {
       clearTimeout(updateTimeout);
     }
+  };
+
+  const setCollapsedState = (noteId: string, collapsed: boolean) => {
+    clearPendingUpdateTimeout();
+
+    const curNote = notesFeed.find((n) => n.id == noteId);
+    if (!curNote) return;
+
+    const newFeed = notesFeed.map((n) => {
+      if (n.id === curNote.id) {
+        if (!updatedIds.current.includes(n.id)) updatedIds.current.push(n.id);
+
+        return {
+          ...n,
+          collapsed,
+        };
+      }
+      return n;
+    });
+
+    newFeed.sort((a, b) => a.sort - b.sort);
+
+    scheduleSyncUpdate();
+    syncFeed.current = newFeed;
+    setNotesFeed(newFeed);
+  };
+
+  const handleToggleCollapse = (noteId: string) => {
+    const curNote = notesFeed.find((n) => n.id == noteId);
+    if (!curNote) return;
+    setCollapsedState(noteId, !curNote.collapsed);
   };
 
   const handleNavigate = (event: KeyboardEvent, isCtrlCommand: boolean) => {
@@ -560,28 +642,9 @@ const NotesList: React.FC<Props> = (props) => {
       collapsed = true;
     }
 
-    clearPendingUpdateTimeout();
-
     let curNote = notesFeed.find((n) => n.id == focusId.current);
-
-    let newFeed = notesFeed.map((n) => {
-      if (n.id === curNote.id) {
-        if (!updatedIds.current.includes(n.id)) updatedIds.current.push(n.id);
-
-        return {
-          ...n,
-          collapsed: collapsed,
-        };
-      } else {
-        return n;
-      }
-    });
-
-    newFeed.sort((a, b) => a.sort - b.sort);
-
-    scheduleSyncUpdate();
-    syncFeed.current = newFeed;
-    setNotesFeed(newFeed);
+    if (!curNote) return;
+    setCollapsedState(curNote.id, collapsed);
   };
 
   const handleSort = (event: KeyboardEvent, isCtrlCommand: boolean) => {
@@ -706,8 +769,94 @@ const NotesList: React.FC<Props> = (props) => {
     }
   };
 
+  const handlePriorityShortcut = (event: KeyboardEvent) => {
+    const priorityByCode: Record<string, number> = {
+      Digit1: 1,
+      Numpad1: 1,
+      Digit2: 2,
+      Numpad2: 2,
+      Digit3: 3,
+      Numpad3: 3,
+    };
+    const nextPriority = priorityByCode[event.code];
+    if (!nextPriority) {
+      return;
+    }
+
+    const curNote = notesFeed.find((n) => n.id == focusId.current);
+    if (!curNote) {
+      return;
+    }
+
+    event.preventDefault();
+    clearPendingUpdateTimeout();
+
+    const updatedPriority =
+      curNote.priority === nextPriority ? null : nextPriority;
+    const newFeed = notesFeed.map((n) => {
+      if (n.id !== curNote.id) {
+        return n;
+      }
+
+      if (!updatedIds.current.includes(n.id)) {
+        updatedIds.current.push(n.id);
+      }
+
+      return {
+        ...n,
+        priority: updatedPriority,
+      };
+    });
+
+    scheduleSyncUpdate();
+    syncFeed.current = newFeed;
+    setNotesFeed(newFeed);
+  };
+
+  const handleBoldShortcut = (event: KeyboardEvent, isCtrlCommand: boolean) => {
+    if (!(isCtrlCommand && eventKeyRef.current === 'KeyB')) {
+      return;
+    }
+
+    const curNote = notesFeed.find((n) => n.id == focusId.current);
+    if (!curNote) {
+      return;
+    }
+
+    event.preventDefault();
+    clearPendingUpdateTimeout();
+
+    const newFeed = notesFeed.map((n) => {
+      if (n.id !== curNote.id) {
+        return n;
+      }
+
+      if (!updatedIds.current.includes(n.id)) {
+        updatedIds.current.push(n.id);
+      }
+
+      return {
+        ...n,
+        isBold: !n.isBold,
+      };
+    });
+
+    scheduleSyncUpdate();
+    syncFeed.current = newFeed;
+    setNotesFeed(newFeed);
+  };
+
   const onKeyPress = (event: KeyboardEvent): void => {
     let isCtrlCommand = event.ctrlKey || event.metaKey;
+    const target = event.target as HTMLElement | null;
+    const isTypingTarget =
+      target?.tagName === 'INPUT' ||
+      target?.tagName === 'TEXTAREA' ||
+      target?.isContentEditable;
+
+    if (isTypingTarget) {
+      return;
+    }
 
     eventKeyRef.current = event.code;
 
@@ -727,6 +876,8 @@ const NotesList: React.FC<Props> = (props) => {
       handleComplete(event);
       handleDeleteShortcut();
       handleInsertShortcut(event);
+      handlePriorityShortcut(event);
+      handleBoldShortcut(event, isCtrlCommand);
     } else {
       // clearTimeout(timeout);
       // lastKeyRef.current = null;
@@ -742,7 +893,7 @@ const NotesList: React.FC<Props> = (props) => {
 
   useKeyPress([], onKeyPress);
 
-  // TODO feed and updatedIds are parameters
+  // TODO feed and updatedIds should be parameters
   const reorderNotes = async (
     prevFeed: NotesListItemProps[],
     feed: NotesListItemProps[] | null,
@@ -802,6 +953,8 @@ const NotesList: React.FC<Props> = (props) => {
         {
           id: newId,
           title: '',
+          priority: null,
+          isBold: false,
           sort: curNote.sort + 1,
           //position: insertAt,
           isNew: true,
@@ -909,6 +1062,9 @@ const NotesList: React.FC<Props> = (props) => {
                     position={position}
                     familyCount={familyCount}
                     title={note.title}
+                    priority={note.priority}
+                    isBold={note.isBold}
+                    hasContent={note.hasContent}
                     complete={note.complete}
                     collapsed={note.collapsed}
                     parentId={note.parentId}
@@ -926,6 +1082,7 @@ const NotesList: React.FC<Props> = (props) => {
                     onAdd={handleEdit}
                     onDelete={handleDelete}
                     isNew={note.isNew}
+                    onToggleCollapse={handleToggleCollapse}
                   />
                 );
               }

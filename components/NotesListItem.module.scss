@@ -63,6 +63,27 @@
 
 .notes_list_item_title {
 	position: relative;
+	padding-right: 24px;
+}
+
+.priority_1 {
+	color: #b02020;
+}
+
+.priority_2 {
+	color: #205cb0;
+}
+
+.priority_3 {
+	color: #239246;
+}
+
+.bold_text {
+	font-weight: 700;
+}
+
+.notes_list_item.complete > .notes_list_item_title_wrapper .notes_list_item_title {
+	color: $gray-color;
 }
 
 .notes_list_item_arrow {
@@ -75,6 +96,19 @@
 	justify-content: center;
 	align-items: center;
 	transition: all .15s ease;
+	cursor: pointer;
+}
+
+.notes_list_item_content_icon {
+	width: 16px;
+	height: 16px;
+	position: absolute;
+	right: 0;
+	top: 3px;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	cursor: pointer;
 }
 
 .collapsed > .notes_list_item_title_wrapper .notes_list_item_arrow {

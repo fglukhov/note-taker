@@ -1,62 +1,74 @@
-@import "../assets/scss/vars";
+@import '../assets/scss/vars';
 
 .notes_list_wrapper {
-	display: flex;
-	margin: 0 -15px;
+  display: flex;
+  margin: 0 -15px;
 }
 
 .notes_list_col_1 {
-	flex-grow: 1;
+  flex-grow: 1;
 }
 
 .notes_list_col_2 {
-	flex: 0 0 340px;
-	max-width: 340px;
+  flex: 0 0 340px;
+  max-width: 340px;
 }
 
 .sidebar_hints {
-	background: $bg-gray-color;
-	padding: 20px;
-	border-radius: 4px;
-}
-
-.hints_list {
-
+  background: $bg-gray-color;
+  padding: 20px;
+  border-radius: 4px;
 }
 
 .hints_item {
-	font-size: 14px;
-	display: flex;
-	margin: 0 -5px;
+  font-size: 14px;
+  display: flex;
+  margin: 0 -5px;
 }
 
 .hints_item + .hints_item {
-	margin-top: 10px;
+  margin-top: 10px;
 }
 
 .hints_item_key {
-	padding: 0 5px;
-	flex: 0 0 160px;
-	max-width: 160px;
-	flex-grow: 0;
-	display: flex;
-	justify-content: flex-end;
+  padding: 0 5px;
+  flex: 0 0 160px;
+  max-width: 160px;
+  flex-grow: 0;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
 }
 
 .hints_item_descr {
-	padding: 0 5px;
-	flex-grow: 1;
+  padding: 0 5px;
+  flex-grow: 1;
 }
 
 .key {
-	font-family: monospace;
-	border: 1px solid $border-gray-color;
-	padding: 1px 10px;
-	border-radius: 3px;
-	white-space: nowrap;
-	font-size: 12px;
+  font-family: monospace;
+  border: 1px solid $border-gray-color;
+  padding: 1px 10px;
+  border-radius: 3px;
+  white-space: nowrap;
+  font-size: 12px;
 }
 
 .key + .key {
-	margin-left: 5px;
+  margin-left: 5px;
+}
+
+.priority_digit_1 {
+	color: #b02020;
+  font-weight: 700;
+}
+
+.priority_digit_2 {
+	color: #205cb0;
+  font-weight: 700;
+}
+
+.priority_digit_3 {
+	color: #239246;
+  font-weight: 700;
 }

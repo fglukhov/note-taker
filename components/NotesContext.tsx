@@ -3,6 +3,9 @@ import React, { createContext, useContext } from 'react';
 export type NoteFeedItem = {
   id: string;
   title: string;
+  priority?: number | null;
+  isBold?: boolean;
+  hasContent?: boolean;
   sort?: number;
   parentId?: string;
   complete?: boolean;

@@ -3,12 +3,16 @@ import { useKeyPress } from '@/lib/useKeyPress';
 import { getFamily } from '@/lib/notesTree';
 import styles from '@/components/NotesListItem.module.scss';
 import { useNotes } from '@/components/NotesContext';
+import Router from 'next/router';
 
-import { ChevronDown } from 'react-feather';
+import { ChevronDown, FileText } from 'react-feather';
 
 export type NotesListItemProps = {
   id: string;
   title: string;
+  priority?: number | null;
+  isBold?: boolean;
+  hasContent?: boolean;
   sort?: number;
   familyCount?: number;
   position?: number;
@@ -43,6 +47,7 @@ export type NotesListItemProps = {
     familyCount: number,
     collapsed?: boolean,
   ) => void;
+  onToggleCollapse?: (noteId: string) => void;
 };
 
 const NotesListItem: React.FC<NotesListItemProps> = (props) => {
@@ -57,7 +62,7 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
 
   const eventKeyRef = useRef<string | null>(null);
 
-  const notesFeed = useNotes() ?? [];
+  const notesFeed = (useNotes() ?? []) as NotesListItemProps[];
 
   const onElementRef = (node: HTMLDivElement | null): void => {
     if (node && props.isFocus) {
@@ -126,6 +131,14 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
   const childNotes = notesFeed.filter(
     (childNote) => childNote.parentId == props.id,
   );
+  const priorityClass =
+    props.priority === 1
+      ? styles.priority_1
+      : props.priority === 2
+        ? styles.priority_2
+        : props.priority === 3
+          ? styles.priority_3
+          : '';
 
   props.registerCollapsedRange?.(
     props.position,
@@ -155,11 +168,32 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
             <div className={styles.notes_list_item_title}>
               {/*<span style={{color: "red", fontSize: "12px",}}>{props.position + ": "}</span>*/}
               {props.familyCount > 1 && (
-                <div className={styles.notes_list_item_arrow}>
+                <div
+                  className={styles.notes_list_item_arrow}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    props.onToggleCollapse?.(id);
+                  }}
+                >
                   <ChevronDown size={24} />
                 </div>
               )}
-              {title}
+              <span
+                className={`${priorityClass} ${props.isBold ? styles.bold_text : ''}`}
+              >
+                {title}
+              </span>
+              {props.hasContent && (
+                <div
+                  className={styles.notes_list_item_content_icon}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    Router.push('/n/[id]', `/n/${id}`);
+                  }}
+                >
+                  <FileText size={16} />
+                </div>
+              )}
             </div>
           </>
         ) : (
@@ -178,7 +212,7 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
                     }
                     editTitle(e).then(() => {});
                   } else {
-                    // TODO консоль выдает 'Form submission canceled because the form is not connected'
+                    // TODO console shows 'Form submission canceled because the form is not connected'
 
                     props.onDelete(id, parentId, sort);
                   }
@@ -227,6 +261,9 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
             position={position}
             familyCount={familyCount}
             title={childNote.title}
+            priority={childNote.priority}
+            isBold={childNote.isBold}
+            hasContent={childNote.hasContent}
             complete={childNote.complete}
             collapsed={childNote.collapsed}
             parentId={childNote.parentId}
@@ -241,6 +278,7 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
             onDelete={props.onDelete}
             isNew={childNote.isNew}
             registerCollapsedRange={props.registerCollapsedRange}
+            onToggleCollapse={props.onToggleCollapse}
           />
         );
       })}

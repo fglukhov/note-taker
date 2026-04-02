@@ -8,6 +8,12 @@ export default async function handle(req, res) {
   try {
     const noteId = String(req.query.id);
     const { title, content } = req.body;
+    const normalizedContent =
+      content != null
+        ? String(content).trim().length > 0
+          ? String(content)
+          : ''
+        : undefined;
 
     // ============================
     // AUTH
@@ -35,7 +41,9 @@ export default async function handle(req, res) {
       },
       data: {
         title,
-        content: content != null ? content : undefined,
+        content: normalizedContent,
+        hasContent:
+          normalizedContent != null ? normalizedContent.length > 0 : undefined,
       },
     });
 
