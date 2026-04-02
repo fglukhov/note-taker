@@ -12,7 +12,7 @@ import { useKeyPress } from '@/lib/useKeyPress';
 import { getFamily, removeFamily } from '@/lib/notesTree';
 import NotesHotkeysHints from '@/components/NotesHotkeysHints';
 import styles from '@/components/NotesList.module.scss';
-import Router from 'next/router';
+import Router, { useRouter } from 'next/router';
 
 // TODO tidy up types
 // TODO handle page reload on cmd+R
@@ -47,6 +47,11 @@ const NotesList: React.FC<Props> = (props) => {
   const [cursorPosition, setCursorPosition] = useState(0);
   const [notesFeed, setNotesFeed] = useState(props.feed);
 
+  const router = useRouter();
+  const isNoteModalOpen = router.isReady && Boolean(router.query.note);
+
+  const notesListScrollRef = useRef<HTMLDivElement | null>(null);
+
   const [isEditTitle, setIsEditTitle] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [isChanged, setIsChanged] = useState(false);
@@ -57,9 +62,11 @@ const NotesList: React.FC<Props> = (props) => {
     const ranges: { start: number; end: number }[] = [];
 
     function visit(parentKey: string, position: number): number {
-      const children = notesFeed.filter(
-        (n) => (n.parentId ?? 'root') === parentKey,
-      );
+      const children = notesFeed
+        .filter((n) => (n.parentId ?? 'root') === parentKey)
+        .slice()
+        // `sort` is the position inside the current parent.
+        .sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0));
       for (const note of children) {
         const familyCount = getFamily(note.id, notesFeed).length;
         if (note.collapsed && familyCount > 1) {
@@ -316,9 +323,11 @@ const NotesList: React.FC<Props> = (props) => {
       let position = 0;
 
       const visit = (parentKey: string): number | null => {
-        const children = notesFeed.filter(
-          (n) => (n.parentId ?? 'root') === parentKey,
-        );
+        const children = notesFeed
+          .filter((n) => (n.parentId ?? 'root') === parentKey)
+          .slice()
+          // `sort` is the position inside the current parent.
+          .sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0));
 
         for (const note of children) {
           if (note.id === targetId) {
@@ -486,7 +495,10 @@ const NotesList: React.FC<Props> = (props) => {
     }
 
     let curNote = notesFeed.find((n) => n.id == focusId.current);
-    Router.push('/n/[id]', `/n/${curNote.id}`);
+    if (!curNote) return;
+    Router.push({ pathname: '/', query: { note: curNote.id } }, undefined, {
+      shallow: true,
+    });
   };
 
   const handleIndent = (event: KeyboardEvent, isCtrlCommand: boolean) => {
@@ -858,6 +870,11 @@ const NotesList: React.FC<Props> = (props) => {
       return;
     }
 
+    if (isNoteModalOpen) {
+      // Note modal is open; block list hotkeys/navigation.
+      return;
+    }
+
     eventKeyRef.current = event.code;
 
     clearTimeout(timeout);
@@ -892,6 +909,43 @@ const NotesList: React.FC<Props> = (props) => {
   };
 
   useKeyPress([], onKeyPress);
+
+  useEffect(() => {
+    if (!router.isReady) return;
+
+    const shouldLock = Boolean(router.query.note);
+
+    if (!shouldLock) {
+      // Restore body scroll if we previously locked it.
+      if (typeof document !== 'undefined') {
+        document.body.style.overflow = '';
+      }
+      return;
+    }
+
+    // Lock scroll to prevent underlying list/page scrolling.
+    const previousBodyOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const el = notesListScrollRef.current;
+    const prevent = (e: Event) => {
+      e.preventDefault();
+    };
+
+    // Prevent wheel/touch scroll on the list container while modal is open.
+    if (el) {
+      el.addEventListener('wheel', prevent, { passive: false });
+      el.addEventListener('touchmove', prevent, { passive: false } as any);
+    }
+
+    return () => {
+      document.body.style.overflow = previousBodyOverflow;
+      if (el) {
+        el.removeEventListener('wheel', prevent as any);
+        el.removeEventListener('touchmove', prevent as any);
+      }
+    };
+  }, [router.isReady, router.query.note]);
 
   // TODO feed and updatedIds should be parameters
   const reorderNotes = async (
@@ -1039,20 +1093,20 @@ const NotesList: React.FC<Props> = (props) => {
           </div>
         )}
 
-        <div className={styles.notes_list}>
+        <div ref={notesListScrollRef} className={styles.notes_list}>
           <NotesProvider feed={notesFeed}>
-            {notesFeed.map((note, i) => {
-              if (note.parentId === 'root') {
+            {(() => {
+              const rootNotes = notesFeed
+                .filter((n) => n.parentId === 'root')
+                .slice()
+                .sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0));
+
+              let positionCursor = 0;
+
+              return rootNotes.map((note) => {
                 const familyCount = getFamily(note.id, notesFeed).length;
-                const position = notesFeed
-                  .slice(0, i)
-                  .reduce(
-                    (acc, n) =>
-                      n.parentId === 'root'
-                        ? acc + getFamily(n.id, notesFeed).length
-                        : acc,
-                    0,
-                  );
+                const position = positionCursor;
+                positionCursor += familyCount;
 
                 return (
                   <NotesListItem
@@ -1078,6 +1132,12 @@ const NotesList: React.FC<Props> = (props) => {
                     onFocus={(curId) => {
                       focusId.current = curId;
                     }}
+                    onSelect={(curId, position, startEditTitle) => {
+                      // Clicking moves focus; double-click enters edit mode.
+                      setIsEditTitle(Boolean(startEditTitle));
+                      setCursorPosition(position);
+                      focusId.current = curId;
+                    }}
                     onEdit={handleEdit}
                     onAdd={handleEdit}
                     onDelete={handleDelete}
@@ -1085,8 +1145,8 @@ const NotesList: React.FC<Props> = (props) => {
                     onToggleCollapse={handleToggleCollapse}
                   />
                 );
-              }
-            })}
+              });
+            })()}
           </NotesProvider>
         </div>
       </div>

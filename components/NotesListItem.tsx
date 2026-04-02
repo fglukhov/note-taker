@@ -1,4 +1,4 @@
-import React, { ReactNode, useState, useRef } from 'react';
+import React, { ReactNode, useState, useRef, useEffect } from 'react';
 import { useKeyPress } from '@/lib/useKeyPress';
 import { getFamily } from '@/lib/notesTree';
 import styles from '@/components/NotesListItem.module.scss';
@@ -25,6 +25,11 @@ export type NotesListItemProps = {
   isNew?: boolean;
   children?: ReactNode;
   onFocus?: (id: string) => void;
+  onSelect?: (
+    noteId: string,
+    position: number,
+    startEditTitle?: boolean,
+  ) => void;
   onCancel?: (
     isNewParam: boolean,
     noteId: string,
@@ -57,6 +62,13 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
   const sort = props.sort;
   const [prevTitle, setPrevTitle] = useState(props.title);
   const [isNew, setIsNew] = useState(props.isNew);
+  const isEditing = props.isEdit && props.isFocus;
+  const hasCommittedRef = useRef(false);
+
+  useEffect(() => {
+    // Reset commit guard when entering/leaving edit mode.
+    hasCommittedRef.current = false;
+  }, [isEditing]);
 
   //const { isInViewport, ref } = useInViewport();
 
@@ -106,18 +118,22 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
     }
   };
 
-  const editTitle = async (e: React.SyntheticEvent) => {
-    e.preventDefault();
+  const commitTitle = () => {
+    // Prevent double-save (e.g. `Enter` submit then `blur`).
+    if (hasCommittedRef.current) return;
+    hasCommittedRef.current = true;
 
-    if (!props.isNew) {
-      // editing note
-
-      setTitle(title);
-      setPrevTitle(title);
+    if (title) {
+      if (!isNew) {
+        props.onEdit?.(id, title);
+        setPrevTitle(title);
+      } else {
+        setIsNew(false);
+        setPrevTitle(title);
+        props.onAdd?.(id, title);
+      }
     } else {
-      // Adding new note
-
-      setIsNew(false);
+      props.onDelete?.(id, parentId, sort);
     }
   };
 
@@ -128,9 +144,11 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
   }
 
   const parentPosition = props.position ?? 0;
-  const childNotes = notesFeed.filter(
-    (childNote) => childNote.parentId == props.id,
-  );
+  const childNotes = notesFeed
+    .filter((childNote) => childNote.parentId == props.id)
+    .slice()
+    // `sort` is the position inside the current parent.
+    .sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0));
   const priorityClass =
     props.priority === 1
       ? styles.priority_1
@@ -160,11 +178,30 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
     >
       {/*<div>"collapsed: " + {props.collapsed && "true"}</div>*/}
       {/*<div>"children: " + {props.familyCount > 1 && "true"}</div>*/}
-      <div className={styles.notes_list_item_title_wrapper} ref={onElementRef}>
+      <div
+        className={styles.notes_list_item_title_wrapper}
+        ref={onElementRef}
+        onClick={
+          !isEditing
+            ? (e) => {
+                e.stopPropagation();
+                props.onSelect?.(id, parentPosition);
+              }
+            : undefined
+        }
+        onDoubleClick={
+          !isEditing
+            ? (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                props.onSelect?.(id, parentPosition, true);
+              }
+            : undefined
+        }
+      >
         {/*<div>Is in viewport: {isOnScreen ? 'true' : 'false'}</div>*/}
-        {!(props.isEdit && props.isFocus) ? (
+        {!isEditing ? (
           <>
-            {/*<div style={{color: "red", fontSize: "12px", paddingBottom: "3px"}}>{props.sort}</div>*/}
             <div className={styles.notes_list_item_title}>
               {/*<span style={{color: "red", fontSize: "12px",}}>{props.position + ": "}</span>*/}
               {props.familyCount > 1 && (
@@ -173,6 +210,10 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
                   onClick={(e) => {
                     e.stopPropagation();
                     props.onToggleCollapse?.(id);
+                  }}
+                  onDoubleClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
                   }}
                 >
                   <ChevronDown size={24} />
@@ -190,6 +231,10 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
                     e.stopPropagation();
                     Router.push('/n/[id]', `/n/${id}`);
                   }}
+                  onDoubleClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                  }}
                 >
                   <FileText size={16} />
                 </div>
@@ -202,20 +247,8 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
             <div className={styles.notes_list_item_form}>
               <form
                 onSubmit={(e) => {
-                  if (title) {
-                    if (!isNew) {
-                      props.onEdit(id, title);
-                    } else {
-                      setIsNew(false);
-                      setPrevTitle(title);
-                      props.onAdd(id, title);
-                    }
-                    editTitle(e).then(() => {});
-                  } else {
-                    // TODO console shows 'Form submission canceled because the form is not connected'
-
-                    props.onDelete(id, parentId, sort);
-                  }
+                  e.preventDefault();
+                  commitTitle();
                 }}
               >
                 <input
@@ -224,6 +257,9 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
                   placeholder="Title"
                   type="text"
                   value={title}
+                  onBlur={() => {
+                    commitTitle();
+                  }}
                   onFocus={(e) => {
                     //e.preventDefault()
                   }}
@@ -279,6 +315,7 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
             isNew={childNote.isNew}
             registerCollapsedRange={props.registerCollapsedRange}
             onToggleCollapse={props.onToggleCollapse}
+            onSelect={props.onSelect}
           />
         );
       })}

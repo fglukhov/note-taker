@@ -1,61 +1,61 @@
 $basic-color: #000;
 
 body {
-	background: #f3f3f3;
+  background: #f3f3f3;
 }
 
 .row {
-	display: -ms-flexbox;
-	display: flex;
-	-ms-flex-wrap: wrap;
-	flex-wrap: wrap;
-	margin-right: -15px;
-	margin-left: -15px;
+  display: -ms-flexbox;
+  display: flex;
+  -ms-flex-wrap: wrap;
+  flex-wrap: wrap;
+  margin-right: -15px;
+  margin-left: -15px;
 }
 
 .col {
-	-ms-flex-preferred-size: 0;
-	flex-basis: 0;
-	-ms-flex-positive: 1;
-	flex-grow: 1;
-	max-width: 100%;
-	padding-left: 15px;
-	padding-right: 15px;
+  -ms-flex-preferred-size: 0;
+  flex-basis: 0;
+  -ms-flex-positive: 1;
+  flex-grow: 1;
+  max-width: 100%;
+  padding-left: 15px;
+  padding-right: 15px;
 }
 
 .page {
-	padding-bottom: 100px;
+  padding-bottom: 100px;
 }
 
 .new-note-hint {
-	display: flex;
-	justify-content: center;
-	align-items: center;
-	height: 50vh;
-	color: #989898;
-	font-size: 20px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 50vh;
+  color: #989898;
+  font-size: 20px;
 }
 
 .new-note-hint span {
-	border: 2px solid #989898;
-	border-radius: 4px;
-	padding: 0 10px;
+  border: 2px solid #989898;
+  border-radius: 4px;
+  padding: 0 10px;
 }
 
 a.logo {
-	font-size: 1.5em;
-	font-weight: bold;
-	color: #000;
-	text-decoration: none;
+  font-size: 1.5em;
+  font-weight: bold;
+  color: #000;
+  text-decoration: none;
 }
 
 .login-button {
-	border: 1px solid var(--geist-foreground);
-	padding: 0.5rem 1rem;
-	border-radius: 3px;
-	font-size: 13px;
-	text-decoration: none;
-	color: var(--geist-foreground);
-	display: inline-block;
-	background: #fff;
+  border: 1px solid var(--geist-foreground);
+  padding: 0.5rem 1rem;
+  border-radius: 3px;
+  font-size: 13px;
+  text-decoration: none;
+  color: var(--geist-foreground);
+  display: inline-block;
+  background: #fff;
 }
