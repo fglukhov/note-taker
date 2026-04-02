@@ -144,9 +144,11 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
   }
 
   const parentPosition = props.position ?? 0;
-  const childNotes = notesFeed.filter(
-    (childNote) => childNote.parentId == props.id,
-  );
+  const childNotes = notesFeed
+    .filter((childNote) => childNote.parentId == props.id)
+    .slice()
+    // `sort` is the position inside the current parent.
+    .sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0));
   const priorityClass =
     props.priority === 1
       ? styles.priority_1
@@ -200,7 +202,6 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
         {/*<div>Is in viewport: {isOnScreen ? 'true' : 'false'}</div>*/}
         {!isEditing ? (
           <>
-            {/*<div style={{color: "red", fontSize: "12px", paddingBottom: "3px"}}>{props.sort}</div>*/}
             <div className={styles.notes_list_item_title}>
               {/*<span style={{color: "red", fontSize: "12px",}}>{props.position + ": "}</span>*/}
               {props.familyCount > 1 && (

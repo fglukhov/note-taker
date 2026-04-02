@@ -57,9 +57,11 @@ const NotesList: React.FC<Props> = (props) => {
     const ranges: { start: number; end: number }[] = [];
 
     function visit(parentKey: string, position: number): number {
-      const children = notesFeed.filter(
-        (n) => (n.parentId ?? 'root') === parentKey,
-      );
+      const children = notesFeed
+        .filter((n) => (n.parentId ?? 'root') === parentKey)
+        .slice()
+        // `sort` is the position inside the current parent.
+        .sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0));
       for (const note of children) {
         const familyCount = getFamily(note.id, notesFeed).length;
         if (note.collapsed && familyCount > 1) {
@@ -316,9 +318,11 @@ const NotesList: React.FC<Props> = (props) => {
       let position = 0;
 
       const visit = (parentKey: string): number | null => {
-        const children = notesFeed.filter(
-          (n) => (n.parentId ?? 'root') === parentKey,
-        );
+        const children = notesFeed
+          .filter((n) => (n.parentId ?? 'root') === parentKey)
+          .slice()
+          // `sort` is the position inside the current parent.
+          .sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0));
 
         for (const note of children) {
           if (note.id === targetId) {
@@ -1041,18 +1045,18 @@ const NotesList: React.FC<Props> = (props) => {
 
         <div className={styles.notes_list}>
           <NotesProvider feed={notesFeed}>
-            {notesFeed.map((note, i) => {
-              if (note.parentId === 'root') {
+            {(() => {
+              const rootNotes = notesFeed
+                .filter((n) => n.parentId === 'root')
+                .slice()
+                .sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0));
+
+              let positionCursor = 0;
+
+              return rootNotes.map((note) => {
                 const familyCount = getFamily(note.id, notesFeed).length;
-                const position = notesFeed
-                  .slice(0, i)
-                  .reduce(
-                    (acc, n) =>
-                      n.parentId === 'root'
-                        ? acc + getFamily(n.id, notesFeed).length
-                        : acc,
-                    0,
-                  );
+                const position = positionCursor;
+                positionCursor += familyCount;
 
                 return (
                   <NotesListItem
@@ -1091,8 +1095,8 @@ const NotesList: React.FC<Props> = (props) => {
                     onToggleCollapse={handleToggleCollapse}
                   />
                 );
-              }
-            })}
+              });
+            })()}
           </NotesProvider>
         </div>
       </div>
