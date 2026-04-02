@@ -1078,6 +1078,12 @@ const NotesList: React.FC<Props> = (props) => {
                     onFocus={(curId) => {
                       focusId.current = curId;
                     }}
+                    onSelect={(curId, position, startEditTitle) => {
+                      // Clicking moves focus; double-click enters edit mode.
+                      setIsEditTitle(Boolean(startEditTitle));
+                      setCursorPosition(position);
+                      focusId.current = curId;
+                    }}
                     onEdit={handleEdit}
                     onAdd={handleEdit}
                     onDelete={handleDelete}
