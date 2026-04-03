@@ -19,8 +19,17 @@ import Router, { useRouter } from 'next/router';
 // TODO handle page reload on cmd+R
 // TODO restore current position after reload and scroll to it
 
+export type FeedSyncFromModal = {
+  rev: number;
+  noteId: string;
+  hasContent: boolean;
+  title?: string;
+};
+
 type Props = {
   feed: NotesListItemProps[];
+  /** After saving from the note modal, merge hasContent/title into the list row. */
+  feedSyncFromModal?: FeedSyncFromModal | null;
 };
 
 let updateTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -325,6 +334,22 @@ const NotesList: React.FC<Props> = (props) => {
   useEffect(() => {
     isChangedRef.current = isChanged;
   }, [isChanged]);
+
+  useEffect(() => {
+    const patch = props.feedSyncFromModal;
+    if (!patch) return;
+    setNotesFeed((prev) =>
+      prev.map((n) =>
+        n.id === patch.noteId
+          ? {
+              ...n,
+              hasContent: patch.hasContent,
+              ...(patch.title !== undefined ? { title: patch.title } : {}),
+            }
+          : n,
+      ),
+    );
+  }, [props.feedSyncFromModal]);
 
   const findPositionById = useCallback(
     (targetId: string): number | null => {
@@ -977,8 +1002,13 @@ const NotesList: React.FC<Props> = (props) => {
     }
 
     // Lock scroll to prevent underlying list/page scrolling.
+    const scrollY = typeof window !== 'undefined' ? window.scrollY : 0;
     const previousBodyOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
+    // Keep window position when the scrollbar disappears (layout shift).
+    if (typeof window !== 'undefined') {
+      window.scrollTo(0, scrollY);
+    }
 
     const el = notesListScrollRef.current;
     const prevent = (e: Event) => {
@@ -993,6 +1023,12 @@ const NotesList: React.FC<Props> = (props) => {
 
     return () => {
       document.body.style.overflow = previousBodyOverflow;
+      if (typeof window !== 'undefined') {
+        const y = scrollY;
+        requestAnimationFrame(() => {
+          window.scrollTo(0, y);
+        });
+      }
       if (el) {
         el.removeEventListener('wheel', prevent as any);
         el.removeEventListener('touchmove', prevent as any);

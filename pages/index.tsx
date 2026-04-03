@@ -16,11 +16,12 @@ if (typeof document !== 'undefined') {
   Modal.setAppElement('#__next');
 }
 
+/** Demo feed: first item is a plain default row; below it, priorities read as urgent (red) / soon (blue) / later (green). */
 const mockNotes: NotesListItemProps[] = [
-  // === Travel Project ===
+  // === Travel project ===
   {
     id: '1',
-    title: 'Organize Family Trip',
+    title: 'Family trip',
     sort: 0,
     parentId: 'root',
     collapsed: false,
@@ -28,11 +29,13 @@ const mockNotes: NotesListItemProps[] = [
   },
   {
     id: '2',
-    title: 'Destination Research',
+    title: 'Important this week: where we go and what to see',
     sort: 0,
     parentId: '1',
     collapsed: false,
     complete: true,
+    priority: 2,
+    hasContent: true,
   },
   {
     id: '3',
@@ -41,14 +44,16 @@ const mockNotes: NotesListItemProps[] = [
     parentId: '2',
     collapsed: false,
     complete: true,
+    hasContent: true,
   },
   {
     id: '4',
-    title: 'Greece',
+    title: 'Greece — only if we have time, no rush',
     sort: 1,
     parentId: '2',
     collapsed: false,
     complete: false,
+    priority: 3,
   },
   {
     id: '5',
@@ -57,56 +62,68 @@ const mockNotes: NotesListItemProps[] = [
     parentId: '1',
     collapsed: false,
     complete: false,
+    isBold: true,
   },
   {
     id: '6',
-    title: 'Flights',
+    title: 'Urgent: flights — fares are climbing',
     sort: 0,
     parentId: '5',
     collapsed: false,
     complete: false,
+    priority: 1,
+    hasContent: true,
   },
   {
     id: '7',
-    title: 'Hotels',
+    title: 'Hotels — options and links are in the note',
     sort: 1,
     parentId: '5',
     collapsed: false,
     complete: false,
+    hasContent: true,
   },
 
-  // === Work Notes ===
+  // === Work ===
   {
     id: '8',
-    title: 'Internal Tooling Improvements',
+    title: 'Important: internal tooling — sync with the team',
     sort: 1,
     parentId: 'root',
     collapsed: true,
     complete: false,
+    priority: 2,
+    isBold: true,
+    hasContent: true,
   },
   {
     id: '9',
-    title: 'CI/CD pipeline update',
+    title: 'CI/CD pipeline refresh',
     sort: 0,
     parentId: '8',
     collapsed: false,
     complete: false,
+    hasContent: true,
   },
   {
     id: '10',
-    title: 'Monitoring',
+    title: 'Monitoring — can wait until after the release',
     sort: 1,
     parentId: '8',
     collapsed: false,
     complete: false,
+    priority: 3,
   },
   {
     id: '11',
-    title: 'Alerting thresholds',
+    title: 'Urgent: alert thresholds — prod is on fire',
     sort: 0,
     parentId: '10',
     collapsed: false,
     complete: true,
+    priority: 1,
+    isBold: true,
+    hasContent: true,
   },
   {
     id: '12',
@@ -115,16 +132,18 @@ const mockNotes: NotesListItemProps[] = [
     parentId: '10',
     collapsed: false,
     complete: false,
+    hasContent: true,
   },
 
-  // === Reading Tracker ===
+  // === Reading ===
   {
     id: '13',
-    title: 'Reading Tracker',
+    title: 'Reading list',
     sort: 2,
     parentId: 'root',
     collapsed: false,
     complete: false,
+    isBold: true,
   },
   {
     id: '14',
@@ -133,14 +152,17 @@ const mockNotes: NotesListItemProps[] = [
     parentId: '13',
     collapsed: false,
     complete: false,
+    isBold: true,
   },
   {
     id: '15',
-    title: '1984 by George Orwell',
+    title: '1984 — finish by the weekend',
     sort: 0,
     parentId: '14',
     collapsed: false,
     complete: true,
+    priority: 2,
+    hasContent: true,
   },
   {
     id: '16',
@@ -149,6 +171,7 @@ const mockNotes: NotesListItemProps[] = [
     parentId: '14',
     collapsed: false,
     complete: false,
+    isBold: true,
   },
   {
     id: '17',
@@ -160,11 +183,14 @@ const mockNotes: NotesListItemProps[] = [
   },
   {
     id: '18',
-    title: 'Sapiens by Yuval Noah Harari',
+    title: 'Sapiens — someday, no deadline',
     sort: 0,
     parentId: '17',
     collapsed: false,
     complete: false,
+    priority: 3,
+    isBold: true,
+    hasContent: true,
   },
 ];
 
@@ -240,6 +266,13 @@ const Main: React.FC<Props> = (props) => {
 
   const [draftTitle, setDraftTitle] = useState('');
   const [draftContent, setDraftContent] = useState('');
+
+  const [feedSyncFromModal, setFeedSyncFromModal] = useState<{
+    rev: number;
+    noteId: string;
+    hasContent: boolean;
+    title?: string;
+  } | null>(null);
 
   // Modal needs appElement to be configured before first client render.
 
@@ -374,6 +407,13 @@ const Main: React.FC<Props> = (props) => {
       };
     });
 
+    setFeedSyncFromModal({
+      rev: Date.now(),
+      noteId: note.id,
+      hasContent: Boolean(updated.hasContent),
+      ...(typeof updated.title === 'string' ? { title: updated.title } : {}),
+    });
+
     return updated;
   };
 
@@ -467,7 +507,10 @@ const Main: React.FC<Props> = (props) => {
           <div>
             <h1>{props.session ? 'Notes' : 'Demo'}</h1>
 
-            <NotesList feed={props.session ? props.feed : mockNotes} />
+            <NotesList
+              feed={props.session ? props.feed : mockNotes}
+              feedSyncFromModal={feedSyncFromModal}
+            />
           </div>
         </main>
       </div>

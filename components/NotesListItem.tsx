@@ -1,4 +1,10 @@
-import React, { ReactNode, useState, useRef, useEffect } from 'react';
+import React, {
+  ReactNode,
+  useState,
+  useRef,
+  useEffect,
+  useLayoutEffect,
+} from 'react';
 import { useKeyPress } from '@/lib/useKeyPress';
 import { getFamily } from '@/lib/notesTree';
 import styles from '@/components/NotesListItem.module.scss';
@@ -73,18 +79,24 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
   //const { isInViewport, ref } = useInViewport();
 
   const eventKeyRef = useRef<string | null>(null);
+  const titleWrapperRef = useRef<HTMLDivElement | null>(null);
+  /** Avoid scrollIntoView on every parent re-render (e.g. modal close) while staying focused. */
+  const hadFocusRef = useRef(false);
 
   const notesFeed = (useNotes() ?? []) as NotesListItemProps[];
 
-  const onElementRef = (node: HTMLDivElement | null): void => {
-    if (node && props.isFocus) {
-      node.scrollIntoView({
-        //behavior: "smooth",
-        block: 'nearest',
-        inline: 'start',
-      });
+  useLayoutEffect(() => {
+    if (!props.isFocus) {
+      hadFocusRef.current = false;
+      return;
     }
-  };
+    if (hadFocusRef.current) return;
+    hadFocusRef.current = true;
+    titleWrapperRef.current?.scrollIntoView({
+      block: 'nearest',
+      inline: 'start',
+    });
+  }, [props.isFocus]);
 
   // if (props.isFocus && !isOnScreen) {
   //
@@ -180,7 +192,7 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
       {/*<div>"children: " + {props.familyCount > 1 && "true"}</div>*/}
       <div
         className={styles.notes_list_item_title_wrapper}
-        ref={onElementRef}
+        ref={titleWrapperRef}
         onClick={
           !isEditing
             ? (e) => {
@@ -229,7 +241,12 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
                   className={styles.notes_list_item_content_icon}
                   onClick={(e) => {
                     e.stopPropagation();
-                    Router.push('/n/[id]', `/n/${id}`);
+                    props.onSelect?.(id, parentPosition);
+                    Router.push(
+                      { pathname: '/', query: { note: id } },
+                      undefined,
+                      { shallow: true },
+                    );
                   }}
                   onDoubleClick={(e) => {
                     e.preventDefault();
