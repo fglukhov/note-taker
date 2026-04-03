@@ -1,6 +1,7 @@
 import React, {
   useState,
   useEffect,
+  useLayoutEffect,
   useRef,
   useMemo,
   useCallback,
@@ -49,6 +50,13 @@ const NotesList: React.FC<Props> = (props) => {
 
   const router = useRouter();
   const isNoteModalOpen = router.isReady && Boolean(router.query.note);
+
+  const noteIdFromQuery = useMemo(() => {
+    const raw = router.query.note;
+    if (typeof raw === 'string') return raw;
+    if (Array.isArray(raw)) return raw[0] ?? null;
+    return null;
+  }, [router.query.note]);
 
   const notesListScrollRef = useRef<HTMLDivElement | null>(null);
 
@@ -351,6 +359,9 @@ const NotesList: React.FC<Props> = (props) => {
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
+    if (!router.isReady) return;
+    // URL `?note=` drives focus for the open note; do not override from session.
+    if (router.query.note) return;
 
     const lastFocusId = sessionStorage.getItem('notes:last-focus-id');
     if (!lastFocusId) return;
@@ -361,7 +372,49 @@ const NotesList: React.FC<Props> = (props) => {
     }
 
     sessionStorage.removeItem('notes:last-focus-id');
-  }, [notesFeed, findPositionById]);
+  }, [notesFeed, findPositionById, router.isReady, router.query.note]);
+
+  // After refresh with `/?note=<id>`, align list focus with the open note and expand ancestors.
+  useEffect(() => {
+    if (!router.isReady || !noteIdFromQuery) return;
+    if (!notesFeed.some((n) => n.id === noteIdFromQuery)) return;
+
+    const ancestorIds: string[] = [];
+    let current: NotesListItemProps | undefined = notesFeed.find(
+      (n) => n.id === noteIdFromQuery,
+    );
+    while (current?.parentId && current.parentId !== 'root') {
+      const pid = current.parentId;
+      ancestorIds.push(pid);
+      current = notesFeed.find((n) => n.id === pid);
+    }
+
+    const collapsedAncestorIds = ancestorIds.filter((aid) => {
+      const n = notesFeed.find((x) => x.id === aid);
+      return n?.collapsed === true;
+    });
+
+    if (collapsedAncestorIds.length > 0) {
+      setNotesFeed((prev) =>
+        prev.map((n) =>
+          collapsedAncestorIds.includes(n.id) ? { ...n, collapsed: false } : n,
+        ),
+      );
+    }
+
+    const restoredPosition = findPositionById(noteIdFromQuery);
+    if (restoredPosition !== null) {
+      setCursorPosition(restoredPosition);
+      focusId.current = noteIdFromQuery;
+    }
+  }, [router.isReady, noteIdFromQuery, notesFeed, findPositionById]);
+
+  useLayoutEffect(() => {
+    if (!router.isReady || !noteIdFromQuery) return;
+    const row = document.getElementById(noteIdFromQuery);
+    if (!row) return;
+    row.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  }, [router.isReady, noteIdFromQuery, notesFeed, cursorPosition]);
 
   const clearPendingUpdateTimeout = () => {
     if (updateTimeout) {
