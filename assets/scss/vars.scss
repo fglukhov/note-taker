@@ -1,4 +1,4 @@
-$basic-color: #000;
-$bg-gray-color: #ebebeb;
-$border-gray-color: #c5c5c5;
-$gray-color: #989898;
+$basic-color:       var(--text-primary);
+$bg-gray-color:     var(--bg-subtle);
+$border-gray-color: var(--border);
+$gray-color:        var(--text-muted);

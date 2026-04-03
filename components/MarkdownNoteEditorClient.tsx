@@ -510,15 +510,22 @@ const MarkdownNoteEditorClient: React.FC<MarkdownNoteEditorProps> = ({
             '& .cm-md-heading-level-6': {
               fontSize: '1.05em',
             },
-            // CodeMirror generates some internal token classes with a non-Latin
-            // prefix. In DevTools they look like `.ͼ7` and may apply underline;
-            // override them so markdown headings render without underline.
-            '& .ͼ7': {
+            // defaultHighlightStyle (from minimalSetup) injects a global
+            // `.ͼ7 { font-weight: bold }` rule. It fires on setext-heading
+            // underlines (`text\n-`), making preceding paragraphs bold while
+            // typing a list. Reset it only when the element does NOT also carry
+            // `.cm-md-heading` — that way ATX headings (which get both classes
+            // on the same span) keep their bold from the rule above.
+            // Neutralize defaultHighlightStyle bold/underline for .ͼ7 tokens
+            // (fires on setext-heading underlines like `text\n-`).
+            '& .ͼ7:not(.cm-md-heading)': {
+              fontWeight: 'normal',
               textDecoration: 'none',
+            },
+            // When .ͼ7 is a child span INSIDE .cm-md-heading, restore bold.
+            // This selector has higher specificity (0,3,0) than the reset (0,2,0).
+            '& .cm-md-heading .ͼ7': {
               fontWeight: '700',
-              display: 'inline-block',
-              padding: '0.15em 0',
-              lineHeight: '1.25',
             },
             '& .cm-md-list-item': {
               // Keep text style stable; bullet is rendered via widget.
