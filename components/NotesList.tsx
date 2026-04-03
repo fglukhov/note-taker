@@ -1,6 +1,7 @@
 import React, {
   useState,
   useEffect,
+  useLayoutEffect,
   useRef,
   useMemo,
   useCallback,
@@ -18,8 +19,17 @@ import Router, { useRouter } from 'next/router';
 // TODO handle page reload on cmd+R
 // TODO restore current position after reload and scroll to it
 
+export type FeedSyncFromModal = {
+  rev: number;
+  noteId: string;
+  hasContent: boolean;
+  title?: string;
+};
+
 type Props = {
   feed: NotesListItemProps[];
+  /** After saving from the note modal, merge hasContent/title into the list row. */
+  feedSyncFromModal?: FeedSyncFromModal | null;
 };
 
 let updateTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -49,6 +59,13 @@ const NotesList: React.FC<Props> = (props) => {
 
   const router = useRouter();
   const isNoteModalOpen = router.isReady && Boolean(router.query.note);
+
+  const noteIdFromQuery = useMemo(() => {
+    const raw = router.query.note;
+    if (typeof raw === 'string') return raw;
+    if (Array.isArray(raw)) return raw[0] ?? null;
+    return null;
+  }, [router.query.note]);
 
   const notesListScrollRef = useRef<HTMLDivElement | null>(null);
 
@@ -318,6 +335,22 @@ const NotesList: React.FC<Props> = (props) => {
     isChangedRef.current = isChanged;
   }, [isChanged]);
 
+  useEffect(() => {
+    const patch = props.feedSyncFromModal;
+    if (!patch) return;
+    setNotesFeed((prev) =>
+      prev.map((n) =>
+        n.id === patch.noteId
+          ? {
+              ...n,
+              hasContent: patch.hasContent,
+              ...(patch.title !== undefined ? { title: patch.title } : {}),
+            }
+          : n,
+      ),
+    );
+  }, [props.feedSyncFromModal]);
+
   const findPositionById = useCallback(
     (targetId: string): number | null => {
       let position = 0;
@@ -351,6 +384,9 @@ const NotesList: React.FC<Props> = (props) => {
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
+    if (!router.isReady) return;
+    // URL `?note=` drives focus for the open note; do not override from session.
+    if (router.query.note) return;
 
     const lastFocusId = sessionStorage.getItem('notes:last-focus-id');
     if (!lastFocusId) return;
@@ -361,7 +397,49 @@ const NotesList: React.FC<Props> = (props) => {
     }
 
     sessionStorage.removeItem('notes:last-focus-id');
-  }, [notesFeed, findPositionById]);
+  }, [notesFeed, findPositionById, router.isReady, router.query.note]);
+
+  // After refresh with `/?note=<id>`, align list focus with the open note and expand ancestors.
+  useEffect(() => {
+    if (!router.isReady || !noteIdFromQuery) return;
+    if (!notesFeed.some((n) => n.id === noteIdFromQuery)) return;
+
+    const ancestorIds: string[] = [];
+    let current: NotesListItemProps | undefined = notesFeed.find(
+      (n) => n.id === noteIdFromQuery,
+    );
+    while (current?.parentId && current.parentId !== 'root') {
+      const pid = current.parentId;
+      ancestorIds.push(pid);
+      current = notesFeed.find((n) => n.id === pid);
+    }
+
+    const collapsedAncestorIds = ancestorIds.filter((aid) => {
+      const n = notesFeed.find((x) => x.id === aid);
+      return n?.collapsed === true;
+    });
+
+    if (collapsedAncestorIds.length > 0) {
+      setNotesFeed((prev) =>
+        prev.map((n) =>
+          collapsedAncestorIds.includes(n.id) ? { ...n, collapsed: false } : n,
+        ),
+      );
+    }
+
+    const restoredPosition = findPositionById(noteIdFromQuery);
+    if (restoredPosition !== null) {
+      setCursorPosition(restoredPosition);
+      focusId.current = noteIdFromQuery;
+    }
+  }, [router.isReady, noteIdFromQuery, notesFeed, findPositionById]);
+
+  useLayoutEffect(() => {
+    if (!router.isReady || !noteIdFromQuery) return;
+    const row = document.getElementById(noteIdFromQuery);
+    if (!row) return;
+    row.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  }, [router.isReady, noteIdFromQuery, notesFeed, cursorPosition]);
 
   const clearPendingUpdateTimeout = () => {
     if (updateTimeout) {
@@ -924,8 +1002,13 @@ const NotesList: React.FC<Props> = (props) => {
     }
 
     // Lock scroll to prevent underlying list/page scrolling.
+    const scrollY = typeof window !== 'undefined' ? window.scrollY : 0;
     const previousBodyOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
+    // Keep window position when the scrollbar disappears (layout shift).
+    if (typeof window !== 'undefined') {
+      window.scrollTo(0, scrollY);
+    }
 
     const el = notesListScrollRef.current;
     const prevent = (e: Event) => {
@@ -940,6 +1023,12 @@ const NotesList: React.FC<Props> = (props) => {
 
     return () => {
       document.body.style.overflow = previousBodyOverflow;
+      if (typeof window !== 'undefined') {
+        const y = scrollY;
+        requestAnimationFrame(() => {
+          window.scrollTo(0, y);
+        });
+      }
       if (el) {
         el.removeEventListener('wheel', prevent as any);
         el.removeEventListener('touchmove', prevent as any);
