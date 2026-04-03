@@ -10,6 +10,7 @@ import Modal from 'react-modal';
 import ReactMarkdown from 'react-markdown';
 import { X } from 'react-feather';
 import MarkdownNoteEditor from '@/components/MarkdownNoteEditor';
+import styles from './index.module.scss';
 
 if (typeof document !== 'undefined') {
   Modal.setAppElement('#__next');
@@ -479,21 +480,21 @@ const Main: React.FC<Props> = (props) => {
         ariaHideApp={false}
         shouldReturnFocusAfterClose={false}
         shouldCloseOnOverlayClick
-        className="noteModal"
-        overlayClassName="noteModalOverlay"
+        className={styles.note_modal}
+        overlayClassName={styles.note_modal_overlay}
       >
         {!isNoteReady ? (
-          <div className="modalLoading">
+          <div className={styles.modal_loading}>
             {noteLoadError ? `Error: ${noteLoadError}` : 'Loading...'}
           </div>
         ) : (
-          <div className="modalInner">
-            <div className="modalHeader">
+          <div className={styles.modal_inner}>
+            <div className={styles.modal_header}>
               {isEditUI ? (
                 isTitleInputOpen ? (
                   <input
                     ref={titleInputRef}
-                    className="modalTitleInput"
+                    className={styles.modal_title_input}
                     onChange={(e) => setDraftTitle(e.target.value)}
                     placeholder="Title"
                     type="text"
@@ -502,7 +503,7 @@ const Main: React.FC<Props> = (props) => {
                   />
                 ) : (
                   <h2
-                    className="modalTitle modalTitleClickable"
+                    className={`${styles.modal_title} ${styles.modal_title_clickable}`}
                     onClick={() => setIsTitleInputOpen(true)}
                     role="button"
                     tabIndex={0}
@@ -516,11 +517,11 @@ const Main: React.FC<Props> = (props) => {
                   </h2>
                 )
               ) : (
-                <h2 className="modalTitle">{note?.title}</h2>
+                <h2 className={styles.modal_title}>{note?.title}</h2>
               )}
               <button
                 type="button"
-                className="closeButton"
+                className={styles.close_button}
                 onClick={saveAndExit}
                 aria-label="Close"
               >
@@ -529,19 +530,19 @@ const Main: React.FC<Props> = (props) => {
             </div>
 
             {isEditUI ? (
-              <form onSubmit={editData} className="editorForm">
+              <form onSubmit={editData} className={styles.editor_form}>
                 <MarkdownNoteEditor
                   value={draftContent}
                   onChange={(val) => setDraftContent(val)}
                   placeholder="Content"
                   autoFocus
                 />
-                <div className="editFooter">
-                  <div className="editFooterLeft">
+                <div className={styles.edit_footer}>
+                  <div className={styles.edit_footer_left}>
                     {userHasValidSession && noteBelongsToUser && (
                       <button
                         type="button"
-                        className="btn btnGhost"
+                        className={`${styles.btn} ${styles.btn_ghost}`}
                         onClick={handleCancelEdit}
                       >
                         Cancel edit
@@ -551,7 +552,7 @@ const Main: React.FC<Props> = (props) => {
                     {userHasValidSession && noteBelongsToUser && (
                       <button
                         type="button"
-                        className="btn btnDanger"
+                        className={`${styles.btn} ${styles.btn_danger}`}
                         onClick={() => void deleteNote(note.id)}
                       >
                         Delete
@@ -559,19 +560,19 @@ const Main: React.FC<Props> = (props) => {
                     )}
                   </div>
 
-                  <div className="editFooterRight">
+                  <div className={styles.edit_footer_right}>
                     <input
                       disabled={!draftTitle}
                       type="submit"
                       value="Save"
-                      className="btn btnPrimary"
+                      className={`${styles.btn} ${styles.btn_primary}`}
                     />
                   </div>
                 </div>
               </form>
             ) : (
               <>
-                <p className="authorLine">
+                <p className={styles.author_line}>
                   By {note?.authorName || 'Unknown author'}
                 </p>
                 <ReactMarkdown>{note?.content ?? ''}</ReactMarkdown>
@@ -579,12 +580,12 @@ const Main: React.FC<Props> = (props) => {
             )}
 
             {!isEditUI && (
-              <div className="actionsBar">
-                <div className="actionsBarLeft">
+              <div className={styles.actions_bar}>
+                <div className={styles.actions_bar_left}>
                   {userHasValidSession && noteBelongsToUser && (
                     <button
                       type="button"
-                      className="btn btnSecondary"
+                      className={`${styles.btn} ${styles.btn_secondary}`}
                       onClick={() => {
                         setIsEdit(true);
                         setIsTitleInputOpen(false);
@@ -595,11 +596,11 @@ const Main: React.FC<Props> = (props) => {
                   )}
                 </div>
 
-                <div className="actionsBarRight">
+                <div className={styles.actions_bar_right}>
                   {userHasValidSession && noteBelongsToUser && (
                     <button
                       type="button"
-                      className="btn btnDanger"
+                      className={`${styles.btn} ${styles.btn_danger}`}
                       onClick={() => void deleteNote(note.id)}
                     >
                       Delete
@@ -610,228 +611,6 @@ const Main: React.FC<Props> = (props) => {
             )}
           </div>
         )}
-
-        <style jsx>{`
-          .modalLoading {
-            padding: 24px;
-            color: rgba(0, 0, 0, 0.65);
-            font-weight: 600;
-          }
-
-          :global(.noteModalOverlay) {
-            background: rgba(0, 0, 0, 0.35);
-            position: fixed;
-            inset: 0;
-            z-index: 10000;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 1.5rem;
-          }
-
-          :global(.noteModal) {
-            background: #fff;
-            width: min(760px, 100%);
-            max-height: 90vh;
-            overflow: auto;
-            border-radius: 14px;
-            padding: 1.5rem 1.5rem;
-            outline: none;
-            box-shadow: 0 12px 36px rgba(0, 0, 0, 0.18);
-            color: rgba(0, 0, 0, 0.9);
-          }
-
-          .modalHeader {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 12px;
-            margin-bottom: 1rem;
-          }
-
-          .modalTitle {
-            font-size: 1.25rem;
-            font-weight: 700;
-            margin: 0;
-            line-height: 1.2;
-            padding-right: 0.5rem;
-          }
-
-          .closeButton {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 34px;
-            height: 34px;
-            border-radius: 10px;
-            border: 1px solid rgba(0, 0, 0, 0.12);
-            background: transparent;
-            color: rgba(0, 0, 0, 0.75);
-            cursor: pointer;
-            transition:
-              background 120ms ease,
-              border-color 120ms ease,
-              transform 120ms ease;
-            flex: 0 0 auto;
-          }
-
-          .closeButton:hover {
-            background: rgba(0, 0, 0, 0.04);
-            border-color: rgba(0, 0, 0, 0.2);
-            transform: translateY(-1px);
-          }
-
-          .authorLine {
-            margin: 0 0 0.75rem 0;
-            color: rgba(0, 0, 0, 0.65);
-          }
-
-          .modalInner {
-            font-family:
-              -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica,
-              Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
-              'Segoe UI Symbol';
-          }
-
-          .modalInner :global(h1),
-          .modalInner :global(h2),
-          .modalInner :global(h3),
-          .modalInner :global(h4),
-          .modalInner :global(h5),
-          .modalInner :global(h6) {
-            text-decoration: none;
-          }
-
-          .modalTitleInput {
-            width: 100%;
-            font-size: 1.05rem;
-            font-weight: 700;
-            padding: 0.75rem 0.9rem;
-            border-radius: 10px;
-            border: 0.125rem solid rgba(0, 0, 0, 0.2);
-            outline: none;
-            background: rgba(255, 255, 255, 1);
-          }
-
-          .modalTitleClickable {
-            cursor: pointer;
-            user-select: none;
-          }
-
-          .modalTitleClickable:hover {
-            text-decoration: underline;
-          }
-
-          .editorForm {
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-          }
-
-          textarea {
-            width: 100%;
-            padding: 0.5rem;
-            margin: 0.5rem 0;
-            border-radius: 0.25rem;
-            border: 0.125rem solid rgba(0, 0, 0, 0.2);
-          }
-
-          .actionsBar {
-            margin-top: 1.25rem;
-            display: flex;
-            gap: 0.75rem;
-            flex-direction: row;
-            align-items: center;
-            justify-content: space-between;
-          }
-
-          .actionsBarLeft,
-          .actionsBarRight {
-            display: flex;
-            gap: 0.75rem;
-            align-items: center;
-          }
-
-          .editFooter {
-            display: flex;
-            gap: 0.75rem;
-            align-items: center;
-            justify-content: space-between;
-            margin-top: 0.25rem;
-          }
-
-          .editFooterLeft,
-          .editFooterRight {
-            display: flex;
-            gap: 0.75rem;
-            align-items: center;
-          }
-
-          .btn {
-            border: 0;
-            border-radius: 12px;
-            padding: 0.85rem 1.15rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition:
-              transform 120ms ease,
-              filter 120ms ease,
-              background 120ms ease;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            white-space: nowrap;
-            width: auto;
-          }
-
-          .btn:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-            transform: none;
-          }
-
-          .btnPrimary {
-            background: #0070f3;
-            color: #fff;
-          }
-
-          .btnPrimary:hover {
-            filter: brightness(0.97);
-            transform: translateY(-1px);
-          }
-
-          .btnSecondary {
-            background: rgba(0, 0, 0, 0.06);
-            color: rgba(0, 0, 0, 0.85);
-            border: 1px solid rgba(0, 0, 0, 0.08);
-          }
-
-          .btnSecondary:hover {
-            background: rgba(0, 0, 0, 0.08);
-            transform: translateY(-1px);
-          }
-
-          .btnGhost {
-            background: transparent;
-            color: rgba(0, 0, 0, 0.85);
-            border: 1px solid rgba(0, 0, 0, 0.14);
-          }
-
-          .btnGhost:hover {
-            background: rgba(0, 0, 0, 0.04);
-            transform: translateY(-1px);
-          }
-
-          .btnDanger {
-            background: #e11d48;
-            color: #fff;
-          }
-
-          .btnDanger:hover {
-            filter: brightness(0.98);
-            transform: translateY(-1px);
-          }
-        `}</style>
       </Modal>
     </Layout>
   );

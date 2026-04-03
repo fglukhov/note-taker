@@ -15,7 +15,7 @@
 }
 
 .sidebar_hints {
-  background: $bg-gray-color;
+  background: var(--bg-subtle);
   padding: 20px;
   border-radius: 4px;
 }
@@ -47,7 +47,7 @@
 
 .key {
   font-family: monospace;
-  border: 1px solid $border-gray-color;
+  border: 1px solid var(--border);
   padding: 1px 10px;
   border-radius: 3px;
   white-space: nowrap;
@@ -59,16 +59,16 @@
 }
 
 .priority_digit_1 {
-	color: #b02020;
+  color: var(--priority-1);
   font-weight: 700;
 }
 
 .priority_digit_2 {
-	color: #205cb0;
+  color: var(--priority-2);
   font-weight: 700;
 }
 
 .priority_digit_3 {
-	color: #239246;
+  color: var(--priority-3);
   font-weight: 700;
 }
