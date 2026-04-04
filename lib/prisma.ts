@@ -5,6 +5,9 @@ import { Pool } from 'pg'; // ➕ новое
 const pool = new Pool({
   // ➕ новое
   connectionString: process.env.DATABASE_URL,
+  ssl: process.env.SUPABASE_CA_CERT
+    ? { ca: process.env.SUPABASE_CA_CERT, rejectUnauthorized: true }
+    : undefined,
 });
 
 const adapter = new PrismaPg(pool); // ➕ новое
