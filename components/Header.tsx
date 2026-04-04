@@ -5,25 +5,22 @@ import { useRouter } from 'next/router';
 import { signOut, useSession } from 'next-auth/react';
 
 const Header: React.FC = () => {
-	const router = useRouter();
-	const isActive: (pathname: string) => boolean = (pathname) =>
-		router.pathname === pathname;
+  const router = useRouter();
+  const isActive: (pathname: string) => boolean = (pathname) =>
+    router.pathname === pathname;
 
-	const { data: session, status } = useSession();
+  const { data: session, status } = useSession();
 
-	let left: React.ReactNode = (
-		<div className="left">
-			<Link
-				href="/"
-				className="logo"
-				data-active={isActive('/')}>
-					Great Plan
-			</Link>
-			<style jsx>{`
+  let left: React.ReactNode = (
+    <div className="left">
+      <Link href="/" className="logo" data-active={isActive('/')}>
+        RootNote
+      </Link>
+      <style jsx>{`
         .bold {
           font-weight: bold;
         }
-        
+
         a {
           text-decoration: none;
           color: var(--geist-foreground);
@@ -37,24 +34,19 @@ const Header: React.FC = () => {
         a + a {
           margin-left: 1rem;
         }
-        
       `}</style>
-		</div>
-	);
+    </div>
+  );
 
-	let right: React.ReactNode = null;
+  let right: React.ReactNode = null;
 
-	if (status === 'loading') {
-		left = (
-			<div className="left">
-				<Link
-					href="/"
-					className="logo"
-					data-active={isActive('/')}
-				>
-						Great Plan
-				</Link>
-				<style jsx>{`
+  if (status === 'loading') {
+    left = (
+      <div className="left">
+        <Link href="/" className="logo" data-active={isActive('/')}>
+          RootNote
+        </Link>
+        <style jsx>{`
           .bold {
             font-weight: bold;
           }
@@ -72,30 +64,32 @@ const Header: React.FC = () => {
           a + a {
             margin-left: 1rem;
           }
-          
-
         `}</style>
-			</div>
-		);
-		right = (
-			<div className="right">
-				<p>Validating session ...</p>
-				<style jsx>{`
+      </div>
+    );
+    right = (
+      <div className="right">
+        <p>Validating session ...</p>
+        <style jsx>{`
           .right {
             margin-left: auto;
           }
         `}</style>
-			</div>
-		);
-	}
+      </div>
+    );
+  }
 
-	if (!session) {
-		right = (
-			<div className="right">
-				<Link href="/api/auth/signin" className="login-button" data-active={isActive('/signup')}>
-					Log in
-				</Link>
-				<style jsx>{`
+  if (!session) {
+    right = (
+      <div className="right">
+        <Link
+          href="/api/auth/signin"
+          className="login-button"
+          data-active={isActive('/signup')}
+        >
+          Log in
+        </Link>
+        <style jsx>{`
           a {
             text-decoration: none;
             color: var(--geist-foreground);
@@ -115,24 +109,21 @@ const Header: React.FC = () => {
             padding: 0.5rem 1rem;
             border-radius: 3px;
           }
-          
-
-          
         `}</style>
-			</div>
-		);
-	}
+      </div>
+    );
+  }
 
-	if (session) {
-		left = (
-			<div className="left">
-				<Link href="/" className="logo" data-active={isActive('/')}>
-					Great Plan
-				</Link>
-				{/*<Link href="/"  data-active={isActive('/')}>*/}
-				{/*	Notes*/}
-				{/*</Link>*/}
-				<style jsx>{`
+  if (session) {
+    left = (
+      <div className="left">
+        <Link href="/" className="logo" data-active={isActive('/')}>
+          RootNote
+        </Link>
+        {/*<Link href="/"  data-active={isActive('/')}>*/}
+        {/*	Notes*/}
+        {/*</Link>*/}
+        <style jsx>{`
           .bold {
             font-weight: bold;
           }
@@ -150,32 +141,29 @@ const Header: React.FC = () => {
           a + a {
             margin-left: 1rem;
           }
-          
-
-          
         `}</style>
-			</div>
-		);
-		right = (
-			<div className="right">
-				<p>
-					{session.user.name} ({session.user.email})
-				</p>
-				{/*<Link href="/create">*/}
-				{/*	<button>*/}
-				{/*		<a>New note</a>*/}
-				{/*	</button>*/}
-				{/*</Link>*/}
-				<button onClick={() => signOut()}>
-					<a>Log out</a>
-				</button>
-				<style jsx>{`
+      </div>
+    );
+    right = (
+      <div className="right">
+        <p>
+          {session.user.name} ({session.user.email})
+        </p>
+        {/*<Link href="/create">*/}
+        {/*	<button>*/}
+        {/*		<a>New note</a>*/}
+        {/*	</button>*/}
+        {/*</Link>*/}
+        <button onClick={() => signOut()}>
+          <a>Log out</a>
+        </button>
+        <style jsx>{`
           a {
             text-decoration: none;
             color: var(--geist-foreground);
             display: inline-block;
           }
-          
+
           p {
             display: inline-block;
             font-size: 13px;
@@ -201,27 +189,24 @@ const Header: React.FC = () => {
             background: #fff;
             border-radius: 3px;
           }
-          
-
-          
         `}</style>
-			</div>
-		);
-	}
+      </div>
+    );
+  }
 
-	return (
-		<nav>
-			{left}
-			{right}
-			<style jsx>{`
+  return (
+    <nav>
+      {left}
+      {right}
+      <style jsx>{`
         nav {
           display: flex;
           padding: 2rem;
           align-items: center;
         }
       `}</style>
-		</nav>
-	);
+    </nav>
+  );
 };
 
 export default Header;

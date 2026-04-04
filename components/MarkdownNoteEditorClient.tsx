@@ -158,9 +158,10 @@ const MarkdownDecorations = (
     }
   }
 
-  // Inline code: `code`
+  // Inline code: `code` (single line only — do not let ` span newlines or it pairs
+  // fence backticks with inner `...` and hides one ` on each side of the block).
   {
-    const re = /`([^`]+?)`/g;
+    const re = /`([^`\n]+?)`/g;
     re.lastIndex = 0;
     let m: RegExpExecArray | null;
     while ((m = re.exec(doc)) !== null) {

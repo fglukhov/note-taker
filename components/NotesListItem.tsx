@@ -217,6 +217,18 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
         {!isEditing ? (
           <>
             <div className={styles.notes_list_item_title}>
+              {
+                <span
+                  style={{
+                    color: 'red',
+                    fontSize: '12px',
+                    paddingBottom: '3px',
+                    paddingRight: '5px',
+                  }}
+                >
+                  {props.sort}
+                </span>
+              }
               {/*<span style={{color: "red", fontSize: "12px",}}>{props.position + ": "}</span>*/}
               {props.familyCount > 1 && (
                 <div
@@ -262,7 +274,6 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
           </>
         ) : (
           <>
-            {/*<div style={{color: "red", fontSize: "12px", paddingBottom: "3px"}}>{props.sort}</div>*/}
             <div className={styles.notes_list_item_form}>
               <form
                 onSubmit={(e) => {
