@@ -36,6 +36,62 @@ let updateTimeout: ReturnType<typeof setTimeout> | null = null;
 //let reorderInterval = null;
 let timeout: ReturnType<typeof setTimeout> | null = null;
 
+const parentKey = (pid: string | undefined | null) => pid ?? 'root';
+
+const sameParent = (
+  noteParent: string | undefined | null,
+  targetParent: string | undefined | null,
+) => parentKey(noteParent) === parentKey(targetParent);
+
+/** Siblings under the same parent, ordered by `sort` then id (stable). */
+const siblingsSortedByParent = (
+  feed: NotesListItemProps[],
+  parentId: string | undefined | null,
+) => {
+  const key = parentKey(parentId);
+  return feed
+    .filter((n) => parentKey(n.parentId) === key)
+    .slice()
+    .sort((a, b) => {
+      const d = (a.sort ?? 0) - (b.sort ?? 0);
+      return d !== 0 ? d : a.id.localeCompare(b.id);
+    });
+};
+
+/** Reassign sort to 0..n-1 among direct children of `parentId` (canonical tree order). */
+const renormalizeSortsForParent = (
+  feed: NotesListItemProps[],
+  parentId: string | undefined | null,
+): NotesListItemProps[] => {
+  const key = parentKey(parentId);
+  const children = feed
+    .filter((n) => parentKey(n.parentId) === key)
+    .slice()
+    .sort((a, b) => {
+      const d = (a.sort ?? 0) - (b.sort ?? 0);
+      return d !== 0 ? d : a.id.localeCompare(b.id);
+    });
+  const idToNewSort = new Map(children.map((c, i) => [c.id, i]));
+  return feed.map((n) => {
+    const ns = idToNewSort.get(n.id);
+    if (ns === undefined) return n;
+    return { ...n, sort: ns };
+  });
+};
+
+const markSiblingsForSync = (
+  feed: NotesListItemProps[],
+  parentId: string | undefined | null,
+  bucket: string[],
+) => {
+  const key = parentKey(parentId);
+  for (const n of feed) {
+    if (parentKey(n.parentId) === key && !bucket.includes(n.id)) {
+      bucket.push(n.id);
+    }
+  }
+};
+
 const NotesList: React.FC<Props> = (props) => {
   const reorderTimeoutRef = useRef<number | null>(null);
 
@@ -117,6 +173,9 @@ const NotesList: React.FC<Props> = (props) => {
       reorderNotes(prevFeed.current, syncFeed.current, savedUpdatedIds.current)
         .then(() => {
           setIsUpdating(false);
+          if (syncFeed.current) {
+            prevFeed.current = syncFeed.current.map((n) => ({ ...n }));
+          }
 
           // If new changes appear while sending, send one more time.
           if (isChangedRef.current) {
@@ -174,25 +233,12 @@ const NotesList: React.FC<Props> = (props) => {
 
     //const deletedCount = notesFeed.length - newFeed.length;
 
-    notesFeed.map((n) => {
-      if (n.parentId === curNote.parentId && n.sort > curNote.sort)
-        updatedIds.current.push(n.id);
-    });
-
     let newFeed = notesFeed.filter((n) => {
       return !removedIds.includes(n.id);
     });
 
-    newFeed = newFeed.map((n) => {
-      if (n.parentId === curNote.parentId && n.sort > curNote.sort) {
-        return {
-          ...n,
-          sort: n.sort - 1,
-        };
-      } else {
-        return n;
-      }
-    });
+    newFeed = renormalizeSortsForParent(newFeed, curNote.parentId);
+    markSiblingsForSync(newFeed, curNote.parentId, updatedIds.current);
 
     //console.log(newFeed)
 
@@ -290,7 +336,11 @@ const NotesList: React.FC<Props> = (props) => {
     let newFeed = [...notesFeed, newNote];
 
     newFeed = newFeed.map((n) => {
-      if (n.sort >= newSort && n.id != newId && n.parentId == parentId) {
+      if (
+        n.sort >= newSort &&
+        n.id != newId &&
+        sameParent(n.parentId, parentId)
+      ) {
         return {
           ...n,
           sort: n.sort + 1,
@@ -305,7 +355,10 @@ const NotesList: React.FC<Props> = (props) => {
       }
     });
 
-    newFeed.sort((a, b) => a.sort - b.sort);
+    newFeed = renormalizeSortsForParent(newFeed, parentId);
+    markSiblingsForSync(newFeed, parentId, updatedIds.current);
+    const newIdx = updatedIds.current.indexOf(newId);
+    if (newIdx >= 0) updatedIds.current.splice(newIdx, 1);
 
     // TODO remove this timeout. It prevents the new note form from being submitted immediately.
 
@@ -465,8 +518,6 @@ const NotesList: React.FC<Props> = (props) => {
       return n;
     });
 
-    newFeed.sort((a, b) => a.sort - b.sort);
-
     scheduleSyncUpdate();
     syncFeed.current = newFeed;
     setNotesFeed(newFeed);
@@ -588,36 +639,20 @@ const NotesList: React.FC<Props> = (props) => {
     clearPendingUpdateTimeout();
 
     let curNote = notesFeed.find((n) => n.id == focusId.current);
-    let parentId = curNote.parentId;
-    const siblingsIds = [];
+    if (!curNote) return;
 
-    notesFeed.map((n) => {
-      if (n.parentId == parentId) {
-        siblingsIds.push(n.id);
-      }
-    });
+    const sibs = siblingsSortedByParent(notesFeed, curNote.parentId);
+    const idx = sibs.findIndex((n) => n.id === focusId.current);
+    const prevSiblingId = idx > 0 ? sibs[idx - 1].id : null;
 
-    let prevSiblingId = null;
+    const newSiblingsCount = notesFeed.filter(
+      (n) => n.parentId === prevSiblingId,
+    ).length;
+    const newSort = newSiblingsCount;
+    const newParentId = prevSiblingId;
 
-    siblingsIds.map((id, i) => {
-      if (id === focusId.current && i > 0) {
-        prevSiblingId = siblingsIds[i - 1];
-      }
-    });
-
-    let newSiblingsCount = 0;
-
-    notesFeed.map((n) => {
-      if (n.parentId === prevSiblingId) {
-        newSiblingsCount += 1;
-      }
-    });
-
-    let newSort = newSiblingsCount;
-    let newParentId = prevSiblingId;
-
-    if (curNote.sort > 0 && prevSiblingId !== null) {
-      const newFeed = notesFeed.map((n) => {
+    if (idx > 0 && prevSiblingId !== null) {
+      let newFeed = notesFeed.map((n) => {
         if (n.id === curNote.id) {
           if (!updatedIds.current.includes(n.id)) updatedIds.current.push(n.id);
 
@@ -626,7 +661,10 @@ const NotesList: React.FC<Props> = (props) => {
             parentId: newParentId,
             sort: newSort,
           };
-        } else if (n.parentId === curNote.parentId && n.sort > curNote.sort) {
+        } else if (
+          sameParent(n.parentId, curNote.parentId) &&
+          n.sort > curNote.sort
+        ) {
           if (!updatedIds.current.includes(n.id)) updatedIds.current.push(n.id);
 
           return {
@@ -638,7 +676,10 @@ const NotesList: React.FC<Props> = (props) => {
         }
       });
 
-      newFeed.sort((a, b) => a.sort - b.sort);
+      newFeed = renormalizeSortsForParent(newFeed, curNote.parentId);
+      newFeed = renormalizeSortsForParent(newFeed, newParentId);
+      markSiblingsForSync(newFeed, curNote.parentId, updatedIds.current);
+      markSiblingsForSync(newFeed, newParentId, updatedIds.current);
 
       scheduleSyncUpdate();
 
@@ -656,11 +697,12 @@ const NotesList: React.FC<Props> = (props) => {
     clearPendingUpdateTimeout();
 
     let curNote = notesFeed.find((n) => n.id == focusId.current);
+    if (!curNote) return;
+
     let parentId = curNote.parentId;
 
-    let curNoteSiblings = notesFeed.filter(
-      (n) => n.parentId === curNote.parentId,
-    );
+    let curNoteSiblings = siblingsSortedByParent(notesFeed, curNote.parentId);
+    const sibIdx = curNoteSiblings.findIndex((n) => n.id === focusId.current);
     let parentFamily = getFamily(curNote.parentId, notesFeed);
 
     // @ts-ignore
@@ -668,11 +710,11 @@ const NotesList: React.FC<Props> = (props) => {
 
     let positionShift = 0;
 
-    if (curNote.sort < curNoteSiblings.length - 1) {
+    if (sibIdx >= 0 && sibIdx < curNoteSiblings.length - 1) {
       positionShift = curNoteFamily.length - 1;
     }
 
-    if (parentId !== 'root') {
+    if (parentKey(parentId) !== 'root') {
       let curParent = notesFeed.find((n) => n.id == parentId);
       let newParentId = curParent.parentId;
       let newSort = curParent.sort + 1;
@@ -687,14 +729,17 @@ const NotesList: React.FC<Props> = (props) => {
             parentId: newParentId,
             sort: newSort,
           };
-        } else if (n.parentId === newParentId && n.sort > curParent.sort) {
+        } else if (
+          sameParent(n.parentId, newParentId) &&
+          n.sort > curParent.sort
+        ) {
           if (!updatedIds.current.includes(n.id)) updatedIds.current.push(n.id);
 
           return {
             ...n,
             sort: n.sort + 1,
           };
-        } else if (n.parentId === parentId && n.sort > curNote.sort) {
+        } else if (sameParent(n.parentId, parentId) && n.sort > curNote.sort) {
           if (!updatedIds.current.includes(n.id)) updatedIds.current.push(n.id);
 
           return {
@@ -706,7 +751,10 @@ const NotesList: React.FC<Props> = (props) => {
         }
       });
 
-      newFeed.sort((a, b) => a.sort - b.sort);
+      newFeed = renormalizeSortsForParent(newFeed, parentId);
+      newFeed = renormalizeSortsForParent(newFeed, newParentId);
+      markSiblingsForSync(newFeed, parentId, updatedIds.current);
+      markSiblingsForSync(newFeed, newParentId, updatedIds.current);
 
       scheduleSyncUpdate();
 
@@ -751,30 +799,29 @@ const NotesList: React.FC<Props> = (props) => {
 
     let sortShift = 0;
     let curNote = notesFeed.find((n) => n.id == focusId.current);
-    let curNoteSiblings = notesFeed.filter(
-      (n) => n.parentId === curNote.parentId,
-    );
+    if (!curNote) return;
 
-    let shiftedNote = null;
+    const curNoteSiblings = siblingsSortedByParent(notesFeed, curNote.parentId);
+    const sIdx = curNoteSiblings.findIndex((n) => n.id === curNote.id);
+
+    let shiftedNote: NotesListItemProps | null = null;
 
     if (eventKeyRef.current == 'ArrowUp') {
-      if (curNote.sort > 0) {
+      if (sIdx > 0) {
         sortShift = -1;
-        shiftedNote = curNoteSiblings.filter(
-          (n) => n.sort == curNote.sort - 1,
-        )[0];
+        shiftedNote = curNoteSiblings[sIdx - 1];
       }
     } else if (eventKeyRef.current == 'ArrowDown') {
-      if (curNote.sort < curNoteSiblings.length - 1) {
+      if (sIdx >= 0 && sIdx < curNoteSiblings.length - 1) {
         sortShift = 1;
-        shiftedNote = curNoteSiblings.filter(
-          (n) => n.sort == curNote.sort + 1,
-        )[0];
+        shiftedNote = curNoteSiblings[sIdx + 1];
       }
     }
 
-    if (sortShift != 0) {
-      let shiftedNoteFamily = getFamily(shiftedNote.id, notesFeed);
+    if (sortShift !== 0 && shiftedNote) {
+      const shiftedNoteFamily = getFamily(shiftedNote.id, notesFeed);
+      const curSort = curNote.sort ?? 0;
+      const otherSort = shiftedNote.sort ?? 0;
 
       updatedIds.current.push(curNote.id);
       updatedIds.current.push(shiftedNote.id);
@@ -783,19 +830,20 @@ const NotesList: React.FC<Props> = (props) => {
         if (n.id === curNote.id) {
           return {
             ...n,
-            sort: n.sort + sortShift,
+            sort: otherSort,
           };
         } else if (n.id === shiftedNote.id) {
           return {
             ...n,
-            sort: n.sort - sortShift,
+            sort: curSort,
           };
         } else {
           return n;
         }
       });
 
-      newFeed.sort((a, b) => a.sort - b.sort);
+      newFeed = renormalizeSortsForParent(newFeed, curNote.parentId);
+      markSiblingsForSync(newFeed, curNote.parentId, updatedIds.current);
 
       scheduleSyncUpdate();
 
@@ -1081,7 +1129,7 @@ const NotesList: React.FC<Props> = (props) => {
     if (curNote.isNew) {
       newFeed.map((n) => {
         if (
-          n.parentId == curNote.parentId &&
+          sameParent(n.parentId, curNote.parentId) &&
           n.sort >= curNote.sort &&
           n.id != noteId
         ) {
@@ -1110,7 +1158,7 @@ const NotesList: React.FC<Props> = (props) => {
       newFeed = newFeed.map((n) => {
         if (
           n.sort > curNote.sort &&
-          n.parentId == curNote.parentId &&
+          sameParent(n.parentId, curNote.parentId) &&
           n.id != newId
         ) {
           return {
@@ -1122,7 +1170,10 @@ const NotesList: React.FC<Props> = (props) => {
         }
       });
 
-      newFeed.sort((a, b) => a.sort - b.sort);
+      newFeed = renormalizeSortsForParent(newFeed, curNote.parentId);
+      markSiblingsForSync(newFeed, curNote.parentId, updatedIds.current);
+      const placeholderIdx = updatedIds.current.indexOf(newId);
+      if (placeholderIdx >= 0) updatedIds.current.splice(placeholderIdx, 1);
 
       setIsEditTitle(true);
 
@@ -1148,7 +1199,7 @@ const NotesList: React.FC<Props> = (props) => {
 
     if (isNewParam) {
       let newFeed = notesFeed.map((n) => {
-        if (n.sort > sort && n.parentId === parentId) {
+        if (n.sort > sort && sameParent(n.parentId, parentId)) {
           return {
             ...n,
             sort: n.sort - 1,
@@ -1159,6 +1210,8 @@ const NotesList: React.FC<Props> = (props) => {
       });
 
       newFeed = newFeed.filter((n) => n.id !== noteId);
+
+      newFeed = renormalizeSortsForParent(newFeed, parentId);
 
       // updatedIds.current = updatedIds.current.filter(id => {id != noteId});
       //
