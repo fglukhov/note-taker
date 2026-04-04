@@ -16,6 +16,8 @@ import { ChevronDown, FileText } from 'react-feather';
 export type NotesListItemProps = {
   id: string;
   title: string;
+  content?: string | null;
+  authorId?: string | null;
   priority?: number | null;
   isBold?: boolean;
   hasContent?: boolean;
