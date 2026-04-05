@@ -10,7 +10,7 @@ import NotesListItem from '@/components/NotesListItem';
 import { NotesProvider } from '@/components/NotesContext';
 import { NotesListItemProps } from '@/components/NotesListItem';
 import { useKeyPress } from '@/lib/useKeyPress';
-import { getFamily, removeFamily } from '@/lib/notesTree';
+import { getFamily, removeFamily, getNoteDepth } from '@/lib/notesTree';
 import NotesHotkeysHints from '@/components/NotesHotkeysHints';
 import styles from '@/components/NotesList.module.scss';
 import Router, { useRouter } from 'next/router';
@@ -326,7 +326,6 @@ const NotesList: React.FC<Props> = (props) => {
       id: newId,
       title: '',
       priority: null,
-      isBold: false,
       sort: newSort,
       //position: insertAt,
       isNew: true,
@@ -998,10 +997,78 @@ const NotesList: React.FC<Props> = (props) => {
         updatedIds.current.push(n.id);
       }
 
+      const currentTitle = n.title ?? '';
+      const boldMatch = currentTitle.match(/^\*\*([\s\S]+)\*\*$/);
+      const newTitle = boldMatch ? boldMatch[1] : `**${currentTitle}**`;
+
       return {
         ...n,
-        isBold: !n.isBold,
+        title: newTitle,
       };
+    });
+
+    scheduleSyncUpdate();
+    syncFeed.current = newFeed;
+    setNotesFeed(newFeed);
+  };
+
+  const handleItalicShortcut = (
+    event: KeyboardEvent,
+    isCtrlCommand: boolean,
+  ) => {
+    if (!(isCtrlCommand && eventKeyRef.current === 'KeyI')) return;
+
+    const curNote = notesFeed.find((n) => n.id == focusId.current);
+    if (!curNote) return;
+
+    event.preventDefault();
+    clearPendingUpdateTimeout();
+
+    const newFeed = notesFeed.map((n) => {
+      if (n.id !== curNote.id) return n;
+      if (!updatedIds.current.includes(n.id)) updatedIds.current.push(n.id);
+
+      const t = n.title ?? '';
+      const isBold = /^\*\*([\s\S]+)\*\*$/.test(t);
+      const isItalic = !isBold && /^\*([\s\S]+)\*$/.test(t);
+      const newTitle = isItalic ? t.slice(1, -1) : `*${t}*`;
+
+      return { ...n, title: newTitle };
+    });
+
+    scheduleSyncUpdate();
+    syncFeed.current = newFeed;
+    setNotesFeed(newFeed);
+  };
+
+  const handleHeadingShortcut = () => {
+    if (!(eventKeyRef.current === 'KeyH' && lastKeyRef.current === 'KeyM'))
+      return;
+
+    const curNote = notesFeed.find((n) => n.id == focusId.current);
+    if (!curNote) return;
+
+    clearTimeout(timeout);
+    lastKeyRef.current = null;
+    clearPendingUpdateTimeout();
+
+    const newFeed = notesFeed.map((n) => {
+      if (n.id !== curNote.id) return n;
+      if (!updatedIds.current.includes(n.id)) updatedIds.current.push(n.id);
+
+      const t = n.title ?? '';
+      const headingMatch = t.match(/^(#{1,3})\s+([\s\S]*)$/);
+      let newTitle: string;
+
+      if (headingMatch) {
+        newTitle = headingMatch[2];
+      } else {
+        const depth = getNoteDepth(n.id, notesFeed);
+        const level = Math.min(depth + 1, 3);
+        newTitle = `${'#'.repeat(level)} ${t}`;
+      }
+
+      return { ...n, title: newTitle };
     });
 
     scheduleSyncUpdate();
@@ -1046,6 +1113,8 @@ const NotesList: React.FC<Props> = (props) => {
       handleInsertShortcut(event);
       handlePriorityShortcut(event);
       handleBoldShortcut(event, isCtrlCommand);
+      handleItalicShortcut(event, isCtrlCommand);
+      handleHeadingShortcut();
     } else {
       // clearTimeout(timeout);
       // lastKeyRef.current = null;
@@ -1170,9 +1239,7 @@ const NotesList: React.FC<Props> = (props) => {
           id: newId,
           title: '',
           priority: null,
-          isBold: false,
           sort: curNote.sort + 1,
-          //position: insertAt,
           isNew: true,
           parentId: curNote.parentId,
         },
@@ -1221,6 +1288,8 @@ const NotesList: React.FC<Props> = (props) => {
     sort: number | undefined,
   ): void => {
     setIsEditTitle(false);
+    clearTimeout(timeout);
+    lastKeyRef.current = null;
 
     if (isNewParam) {
       let newFeed = notesFeed.map((n) => {
@@ -1284,7 +1353,6 @@ const NotesList: React.FC<Props> = (props) => {
                     familyCount={familyCount}
                     title={note.title}
                     priority={note.priority}
-                    isBold={note.isBold}
                     hasContent={note.hasContent}
                     complete={note.complete}
                     collapsed={note.collapsed}

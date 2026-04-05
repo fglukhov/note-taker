@@ -4,7 +4,6 @@ export type NoteFeedItem = {
   id: string;
   title: string;
   priority?: number | null;
-  isBold?: boolean;
   hasContent?: boolean;
   sort?: number;
   parentId?: string;
