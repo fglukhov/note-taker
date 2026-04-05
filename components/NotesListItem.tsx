@@ -6,11 +6,13 @@ import React, {
   useLayoutEffect,
 } from 'react';
 import { useKeyPress } from '@/lib/useKeyPress';
+import { applyInlineMarkdown } from '@/lib/markdownInput';
 import { getFamily } from '@/lib/notesTree';
 import styles from '@/components/NotesListItem.module.scss';
 import { useNotes } from '@/components/NotesContext';
 import Router from 'next/router';
 
+import ReactMarkdown from 'react-markdown';
 import { ChevronDown, FileText } from 'react-feather';
 
 export type NotesListItemProps = {
@@ -19,7 +21,6 @@ export type NotesListItemProps = {
   content?: string | null;
   authorId?: string | null;
   priority?: number | null;
-  isBold?: boolean;
   hasContent?: boolean;
   sort?: number;
   familyCount?: number;
@@ -75,8 +76,13 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
   const hasCommittedRef = useRef(false);
 
   useEffect(() => {
-    // Reset commit guard when entering/leaving edit mode.
     hasCommittedRef.current = false;
+    // When entering edit mode, sync title/prevTitle with the latest prop value.
+    if (isEditing) {
+      setTitle(props.title);
+      setPrevTitle(props.title);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isEditing]);
 
   //const { isInViewport, ref } = useInViewport();
@@ -267,9 +273,52 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
                 </div>
               )}
               <span
-                className={`${priorityClass} ${props.isBold ? styles.bold_text : ''}`}
+                className={[
+                  priorityClass,
+                  /^#{1}\s/.test(props.title ?? '') ? styles.title_h1 : '',
+                  /^#{2}\s/.test(props.title ?? '') ? styles.title_h2 : '',
+                  /^#{3}\s/.test(props.title ?? '') ? styles.title_h3 : '',
+                ]
+                  .filter(Boolean)
+                  .join(' ')}
               >
-                {title}
+                <ReactMarkdown
+                  components={{
+                    p: ({ children }) => <>{children}</>,
+                    h1: ({ children }) => <>{children}</>,
+                    h2: ({ children }) => <>{children}</>,
+                    h3: ({ children }) => <>{children}</>,
+                    a: ({ href, children }) => (
+                      <a
+                        href={href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        onDoubleClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                        }}
+                      >
+                        {children}
+                      </a>
+                    ),
+                  }}
+                  allowedElements={[
+                    'p',
+                    'h1',
+                    'h2',
+                    'h3',
+                    'strong',
+                    'em',
+                    'code',
+                    'del',
+                    's',
+                    'a',
+                  ]}
+                  unwrapDisallowed
+                >
+                  {props.title}
+                </ReactMarkdown>
               </span>
               {props.hasContent && (
                 <div
@@ -303,24 +352,29 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
                 }}
               >
                 <input
-                  //autoFocus
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="Title"
                   type="text"
                   value={title}
-                  onBlur={() => {
-                    commitTitle();
-                  }}
-                  onFocus={(e) => {
-                    //e.preventDefault()
+                  onBlur={() => commitTitle()}
+                  onKeyDown={(e) => {
+                    const isMod = e.metaKey || e.ctrlKey;
+                    if (isMod && e.key === 'b') {
+                      e.preventDefault();
+                      applyInlineMarkdown(e.currentTarget, '**', setTitle);
+                    } else if (isMod && e.key === 'i') {
+                      e.preventDefault();
+                      applyInlineMarkdown(e.currentTarget, '*', setTitle);
+                    } else if (e.key === 'Escape') {
+                      e.preventDefault();
+                      hasCommittedRef.current = true;
+                      if (!isNew) setTitle(prevTitle);
+                      props.onCancel(isNew, id, parentId, sort);
+                    }
                   }}
                   ref={(el) => {
-                    if (el !== null && props.isFocus) {
-                      //console.log(el)
-
-                      el.focus({
-                        preventScroll: true,
-                      });
+                    if (el && props.isFocus) {
+                      el.focus({ preventScroll: true });
                     }
                   }}
                 />
@@ -349,7 +403,6 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
             familyCount={familyCount}
             title={childNote.title}
             priority={childNote.priority}
-            isBold={childNote.isBold}
             hasContent={childNote.hasContent}
             complete={childNote.complete}
             collapsed={childNote.collapsed}

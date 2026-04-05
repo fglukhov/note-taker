@@ -32,6 +32,20 @@ export const removeFamily = (
   return removeFamily(id, more, s, [...r, node]);
 };
 
+export const getNoteDepth = (
+  id: string,
+  feed: NotesListItemProps[],
+): number => {
+  let depth = 0;
+  let current = feed.find((n) => n.id === id);
+  while (current?.parentId) {
+    depth++;
+    current = feed.find((n) => n.id === current!.parentId);
+    if (depth > 20) break;
+  }
+  return depth;
+};
+
 export const getFamily = (id: string, feed: NotesListItemProps[]) => {
   const childrenByParentId = buildChildrenIndex(feed);
 

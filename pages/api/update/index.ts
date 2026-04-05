@@ -41,7 +41,6 @@ export default async function handle(req, res) {
       collapsed,
       title,
       priority,
-      isBold,
     ) => {
       return prisma.note.upsert({
         where: { id },
@@ -53,7 +52,6 @@ export default async function handle(req, res) {
           collapsed: collapsed ?? false,
           title,
           priority: priority ?? null,
-          isBold: isBold ?? false,
         },
 
         create: {
@@ -64,7 +62,6 @@ export default async function handle(req, res) {
           collapsed: collapsed ?? false,
           title,
           priority: priority ?? null,
-          isBold: isBold ?? false,
           authorId: user.id,
         },
       });
@@ -86,7 +83,6 @@ export default async function handle(req, res) {
               curNote.collapsed,
               curNote.title,
               curNote.priority,
-              curNote.isBold,
             )
           : deleteRow(id);
       }),

@@ -112,6 +112,18 @@ const NotesHotkeysHints: React.FC = () => {
           </div>
           <div className={styles.hints_item_descr}>Toggle bold</div>
         </div>
+        <div className={styles.hints_item}>
+          <div className={styles.hints_item_key}>
+            <div className={styles.key}>{isMac ? '⌘ + I' : 'Ctrl + I'}</div>
+          </div>
+          <div className={styles.hints_item_descr}>Toggle italic</div>
+        </div>
+        <div className={styles.hints_item}>
+          <div className={styles.hints_item_key}>
+            <div className={styles.key}>mh</div>
+          </div>
+          <div className={styles.hints_item_descr}>Toggle heading</div>
+        </div>
       </div>
     </div>
   );

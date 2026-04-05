@@ -11,6 +11,7 @@ import ReactMarkdown from 'react-markdown';
 import { X } from 'react-feather';
 import MarkdownNoteEditor from '@/components/MarkdownNoteEditor';
 import { getFamily } from '@/lib/notesTree';
+import { applyInlineMarkdown } from '@/lib/markdownInput';
 if (typeof document !== 'undefined') {
   Modal.setAppElement('#__next');
 }
@@ -80,7 +81,6 @@ const mockNotes: NotesListItemProps[] = [
     parentId: '1',
     collapsed: false,
     complete: false,
-    isBold: true,
     hasContent: false,
     authorId: null,
   },
@@ -128,7 +128,6 @@ _No decisions — collect feedback first._`,
     collapsed: true,
     complete: false,
     priority: 2,
-    isBold: true,
     hasContent: true,
     authorId: null,
   },
@@ -173,7 +172,6 @@ Branch: \`chore/ci-speed\` (demo)`,
     collapsed: false,
     complete: true,
     priority: 1,
-    isBold: true,
     hasContent: true,
     authorId: null,
   },
@@ -200,7 +198,6 @@ On-call runbook: wiki/demo-link (placeholder).`,
     parentId: 'root',
     collapsed: false,
     complete: false,
-    isBold: true,
     hasContent: false,
     authorId: null,
   },
@@ -212,7 +209,6 @@ On-call runbook: wiki/demo-link (placeholder).`,
     parentId: '13',
     collapsed: false,
     complete: false,
-    isBold: true,
     hasContent: false,
     authorId: null,
   },
@@ -240,7 +236,6 @@ Quote to revisit: *Who controls the past...*`,
     parentId: '14',
     collapsed: false,
     complete: false,
-    isBold: true,
     hasContent: false,
     authorId: null,
   },
@@ -266,7 +261,6 @@ Interesting bit: cognitive revolution vs fiction — ties to planning doc.`,
     collapsed: false,
     complete: false,
     priority: 3,
-    isBold: true,
     hasContent: true,
     authorId: null,
   },
@@ -770,6 +764,24 @@ const Main: React.FC<Props> = (props) => {
                     type="text"
                     value={draftTitle}
                     onBlur={() => setIsTitleInputOpen(false)}
+                    onKeyDown={(e) => {
+                      const isMod = e.metaKey || e.ctrlKey;
+                      if (isMod && e.key === 'b') {
+                        e.preventDefault();
+                        applyInlineMarkdown(
+                          e.currentTarget,
+                          '**',
+                          setDraftTitle,
+                        );
+                      } else if (isMod && e.key === 'i') {
+                        e.preventDefault();
+                        applyInlineMarkdown(
+                          e.currentTarget,
+                          '*',
+                          setDraftTitle,
+                        );
+                      }
+                    }}
                   />
                 ) : (
                   <h2
@@ -783,11 +795,32 @@ const Main: React.FC<Props> = (props) => {
                       }
                     }}
                   >
-                    {draftTitle}
+                    <ReactMarkdown
+                      components={{ p: ({ children }) => <>{children}</> }}
+                      allowedElements={[
+                        'p',
+                        'strong',
+                        'em',
+                        'code',
+                        'del',
+                        's',
+                      ]}
+                      unwrapDisallowed
+                    >
+                      {draftTitle}
+                    </ReactMarkdown>
                   </h2>
                 )
               ) : (
-                <h2 className="modal_title">{note?.title}</h2>
+                <h2 className="modal_title">
+                  <ReactMarkdown
+                    components={{ p: ({ children }) => <>{children}</> }}
+                    allowedElements={['p', 'strong', 'em', 'code', 'del', 's']}
+                    unwrapDisallowed
+                  >
+                    {note?.title ?? ''}
+                  </ReactMarkdown>
+                </h2>
               )}
               <button
                 type="button"
