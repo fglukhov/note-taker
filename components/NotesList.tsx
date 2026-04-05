@@ -895,6 +895,24 @@ const NotesList: React.FC<Props> = (props) => {
     setNotesFeed(newFeed);
   };
 
+  const handleLeafCompleteChange = (noteId: string, isComplete: boolean) => {
+    const curNote = notesFeed.find((n) => n.id === noteId);
+    if (!curNote) return;
+    if (getFamily(noteId, notesFeed).length !== 1) return;
+
+    clearPendingUpdateTimeout();
+
+    const newFeed = notesFeed.map((n) => {
+      if (n.id !== noteId) return n;
+      if (!updatedIds.current.includes(n.id)) updatedIds.current.push(n.id);
+      return { ...n, complete: isComplete };
+    });
+
+    scheduleSyncUpdate();
+    syncFeed.current = newFeed;
+    setNotesFeed(newFeed);
+  };
+
   const handleDeleteShortcut = () => {
     if (eventKeyRef.current == 'Delete') {
       handleDelete();
@@ -1285,6 +1303,7 @@ const NotesList: React.FC<Props> = (props) => {
                     onDelete={handleDelete}
                     isNew={note.isNew}
                     onToggleCollapse={handleToggleCollapse}
+                    onComplete={handleLeafCompleteChange}
                   />
                 );
               });
