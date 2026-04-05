@@ -14,14 +14,14 @@ const NotesHotkeysHints: React.FC = () => {
       <div className={styles.hints_list}>
         <div className={styles.hints_item}>
           <div className={styles.hints_item_key}>
-            <div className={styles.key}>{isMac ? 'Return' : 'Enter'}</div>
+            <div className={styles.key}>Enter</div>
           </div>
           <div className={styles.hints_item_descr}>Add note</div>
         </div>
         <div className={styles.hints_item}>
           <div className={styles.hints_item_key}>
             <div className={styles.key}>
-              {isMac ? '⌥ + Return' : 'Alt + Enter'}
+              {isMac ? '⌥ + Enter' : 'Alt + Enter'}
             </div>
           </div>
           <div className={styles.hints_item_descr}>Add above</div>
@@ -29,7 +29,7 @@ const NotesHotkeysHints: React.FC = () => {
         <div className={styles.hints_item}>
           <div className={styles.hints_item_key}>
             <div className={styles.key}>
-              {isMac ? '⇧ + Return' : 'Shift + Enter'}
+              {isMac ? '⇧ + Enter' : 'Shift + Enter'}
             </div>
           </div>
           <div className={styles.hints_item_descr}>Add a sub-item</div>

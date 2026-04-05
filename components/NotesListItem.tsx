@@ -71,6 +71,7 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
   const [prevTitle, setPrevTitle] = useState(props.title);
   const [isNew, setIsNew] = useState(props.isNew);
   const isEditing = props.isEdit && props.isFocus;
+  const isLeaf = (props.familyCount ?? 1) === 1;
   const hasCommittedRef = useRef(false);
 
   useEffect(() => {
@@ -217,17 +218,37 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
         {!isEditing ? (
           <>
             <div className={styles.notes_list_item_title}>
-              {
-                <span
-                  style={{
-                    color: 'red',
-                    fontSize: '12px',
-                    paddingBottom: '3px',
-                    paddingRight: '5px',
+              {isLeaf && (
+                <label
+                  className={styles.notes_list_item_complete_checkbox}
+                  onClick={(e) => e.stopPropagation()}
+                  onDoubleClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
                   }}
                 >
-                  {props.sort}
-                </span>
+                  <input
+                    type="checkbox"
+                    checked={Boolean(props.complete)}
+                    onChange={(e) => {
+                      e.stopPropagation();
+                      props.onComplete?.(id, e.target.checked);
+                    }}
+                    aria-label="Mark note complete"
+                  />
+                </label>
+              )}
+              {
+                // <span
+                //   style={{
+                //     color: 'red',
+                //     fontSize: '12px',
+                //     paddingBottom: '3px',
+                //     paddingRight: '5px',
+                //   }}
+                // >
+                //   {props.sort}
+                // </span>
               }
               {/*<span style={{color: "red", fontSize: "12px",}}>{props.position + ": "}</span>*/}
               {props.familyCount > 1 && (
@@ -346,6 +367,7 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
             registerCollapsedRange={props.registerCollapsedRange}
             onToggleCollapse={props.onToggleCollapse}
             onSelect={props.onSelect}
+            onComplete={props.onComplete}
           />
         );
       })}

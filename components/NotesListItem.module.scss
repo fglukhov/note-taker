@@ -68,6 +68,37 @@
   padding-right: 24px;
 }
 
+.notes_list_item_complete_checkbox {
+  position: absolute;
+  left: -23px;
+  top: 50%;
+  transform: translateY(-50%);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+  pointer-events: none;
+  cursor: pointer;
+
+  input {
+    margin: 0;
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    accent-color: var(--text-muted);
+    outline: none !important;
+    border: none !important;
+  }
+}
+
+.notes_list_item_title_wrapper:hover .notes_list_item_complete_checkbox,
+.notes_list_item_complete_checkbox:focus-within {
+  opacity: 1;
+  pointer-events: auto;
+}
+
 .priority_1 {
   color: var(--priority-1);
 }

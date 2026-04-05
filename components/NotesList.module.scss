@@ -1,10 +1,5 @@
 @import '../assets/scss/vars';
 
-.notes_list_wrapper {
-  display: flex;
-  margin: 0 -15px;
-}
-
 .notes_list_col_1 {
   flex-grow: 1;
 }
@@ -51,7 +46,7 @@
   padding: 1px 10px;
   border-radius: 3px;
   white-space: nowrap;
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .key + .key {

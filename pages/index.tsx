@@ -11,8 +11,6 @@ import ReactMarkdown from 'react-markdown';
 import { X } from 'react-feather';
 import MarkdownNoteEditor from '@/components/MarkdownNoteEditor';
 import { getFamily } from '@/lib/notesTree';
-import styles from './index.module.scss';
-
 if (typeof document !== 'undefined') {
   Modal.setAppElement('#__next');
 }
@@ -103,11 +101,9 @@ Airline B: basic only — skip.`,
   },
   {
     id: '7',
-    title: 'Hotels — options and links are in the note',
-    content: `| Area | Link | Rough € |
-|------|------|--------|
-| Center | (demo) | 120–180 |
-| Near station | (demo) | 90–130 |
+    title: 'Hotels — shortlist (demo)',
+    content: `**Center** — (demo), about €120–180  
+**Near station** — (demo), about €90–130
 
 Free cancellation until 48h — prioritize.`,
     sort: 1,
@@ -754,21 +750,21 @@ const Main: React.FC<Props> = (props) => {
         ariaHideApp={false}
         shouldReturnFocusAfterClose={false}
         shouldCloseOnOverlayClick
-        className={styles.note_modal}
-        overlayClassName={styles.note_modal_overlay}
+        className="note_modal"
+        overlayClassName="note_modal_overlay"
       >
         {!isNoteReady ? (
-          <div className={styles.modal_loading}>
+          <div className="modal_loading">
             {noteLoadError ? `Error: ${noteLoadError}` : 'Loading...'}
           </div>
         ) : (
-          <div className={styles.modal_inner}>
-            <div className={styles.modal_header}>
+          <div className="modal_inner">
+            <div className="modal_header">
               {isEditUI ? (
                 isTitleInputOpen ? (
                   <input
                     ref={titleInputRef}
-                    className={styles.modal_title_input}
+                    className="modal_title_input"
                     onChange={(e) => setDraftTitle(e.target.value)}
                     placeholder="Title"
                     type="text"
@@ -777,7 +773,7 @@ const Main: React.FC<Props> = (props) => {
                   />
                 ) : (
                   <h2
-                    className={`${styles.modal_title} ${styles.modal_title_clickable}`}
+                    className="modal_title modal_title_clickable"
                     onClick={() => setIsTitleInputOpen(true)}
                     role="button"
                     tabIndex={0}
@@ -791,11 +787,11 @@ const Main: React.FC<Props> = (props) => {
                   </h2>
                 )
               ) : (
-                <h2 className={styles.modal_title}>{note?.title}</h2>
+                <h2 className="modal_title">{note?.title}</h2>
               )}
               <button
                 type="button"
-                className={styles.close_button}
+                className="close_button"
                 onClick={saveAndExit}
                 aria-label="Close"
               >
@@ -804,19 +800,19 @@ const Main: React.FC<Props> = (props) => {
             </div>
 
             {isEditUI ? (
-              <form onSubmit={editData} className={styles.editor_form}>
+              <form onSubmit={editData} className="editor_form">
                 <MarkdownNoteEditor
                   value={draftContent}
                   onChange={(val) => setDraftContent(val)}
                   placeholder="Content"
                   autoFocus
                 />
-                <div className={styles.edit_footer}>
-                  <div className={styles.edit_footer_left}>
+                <div className="edit_footer">
+                  <div className="edit_footer_left">
                     {canEditNoteLikeOwner && (
                       <button
                         type="button"
-                        className={`${styles.btn} ${styles.btn_ghost}`}
+                        className="btn btn_ghost"
                         onClick={handleCancelEdit}
                       >
                         Cancel edit
@@ -826,7 +822,7 @@ const Main: React.FC<Props> = (props) => {
                     {canEditNoteLikeOwner && (
                       <button
                         type="button"
-                        className={`${styles.btn} ${styles.btn_danger}`}
+                        className="btn btn_danger"
                         onClick={() => void deleteNote(note.id)}
                       >
                         Delete
@@ -834,12 +830,12 @@ const Main: React.FC<Props> = (props) => {
                     )}
                   </div>
 
-                  <div className={styles.edit_footer_right}>
+                  <div className="edit_footer_right">
                     <input
                       disabled={!draftTitle}
                       type="submit"
                       value="Save"
-                      className={`${styles.btn} ${styles.btn_primary}`}
+                      className="btn btn_primary"
                     />
                   </div>
                 </div>
@@ -849,12 +845,12 @@ const Main: React.FC<Props> = (props) => {
             )}
 
             {!isEditUI && (
-              <div className={styles.actions_bar}>
-                <div className={styles.actions_bar_left}>
+              <div className="actions_bar">
+                <div className="actions_bar_left">
                   {canEditNoteLikeOwner && (
                     <button
                       type="button"
-                      className={`${styles.btn} ${styles.btn_secondary}`}
+                      className="btn btn_secondary"
                       onClick={() => {
                         setIsEdit(true);
                         setIsTitleInputOpen(false);
@@ -865,11 +861,11 @@ const Main: React.FC<Props> = (props) => {
                   )}
                 </div>
 
-                <div className={styles.actions_bar_right}>
+                <div className="actions_bar_right">
                   {canEditNoteLikeOwner && (
                     <button
                       type="button"
-                      className={`${styles.btn} ${styles.btn_danger}`}
+                      className="btn btn_danger"
                       onClick={() => void deleteNote(note.id)}
                     >
                       Delete
