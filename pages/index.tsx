@@ -101,11 +101,9 @@ Airline B: basic only — skip.`,
   },
   {
     id: '7',
-    title: 'Hotels — options and links are in the note',
-    content: `| Area | Link | Rough € |
-|------|------|--------|
-| Center | (demo) | 120–180 |
-| Near station | (demo) | 90–130 |
+    title: 'Hotels — shortlist (demo)',
+    content: `**Center** — (demo), about €120–180  
+**Near station** — (demo), about €90–130
 
 Free cancellation until 48h — prioritize.`,
     sort: 1,

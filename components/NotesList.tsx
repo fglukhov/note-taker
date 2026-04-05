@@ -920,9 +920,16 @@ const NotesList: React.FC<Props> = (props) => {
   };
 
   const handleInsertShortcut = (event: KeyboardEvent) => {
-    if (eventKeyRef.current == 'Enter') {
-      insertNote(event);
+    if (eventKeyRef.current != 'Enter') {
+      return;
     }
+    // Holding Enter fires repeated keydowns before React state updates; each
+    // would enqueue another insert and corrupt cursor/focus.
+    if (event.repeat) {
+      return;
+    }
+    event.preventDefault();
+    insertNote(event);
   };
 
   const handlePriorityShortcut = (event: KeyboardEvent) => {
