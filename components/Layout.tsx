@@ -6,9 +6,11 @@ type Props = {
 };
 
 const Layout: React.FC<Props> = (props) => (
-  <div>
+  <>
     <Header />
-    <div className="layout">{props.children}</div>
+    <main>
+      <div className="container">{props.children}</div>
+    </main>
     <style jsx global>{`
       html {
         box-sizing: border-box;
@@ -40,12 +42,7 @@ const Layout: React.FC<Props> = (props) => (
         cursor: pointer;
       }
     `}</style>
-    <style jsx>{`
-      .layout {
-        padding: 0 2rem;
-      }
-    `}</style>
-  </div>
+  </>
 );
 
 export default Layout;

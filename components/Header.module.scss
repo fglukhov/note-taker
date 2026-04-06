@@ -1,0 +1,58 @@
+@import '../assets/scss/vars';
+
+.header {
+  padding-block: 2rem;
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+}
+
+.left {
+  a {
+    text-decoration: none;
+    color: var(--geist-foreground);
+    display: inline-block;
+  }
+
+  a[data-active='true'] {
+    color: gray;
+  }
+
+  a + a {
+    margin-left: 1rem;
+  }
+}
+
+.right {
+  margin-left: auto;
+
+  a {
+    text-decoration: none;
+    color: var(--geist-foreground);
+    display: inline-block;
+  }
+
+  a + a {
+    margin-left: 1rem;
+  }
+
+  p {
+    display: inline-block;
+    font-size: 13px;
+    padding-right: 1rem;
+  }
+
+  button {
+    border: none;
+    background: #fff;
+    border-radius: 3px;
+
+    a {
+      border: 1px solid var(--geist-foreground);
+      padding: 0.5rem 1rem;
+      border-radius: 3px;
+    }
+  }
+}
