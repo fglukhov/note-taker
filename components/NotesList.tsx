@@ -30,6 +30,8 @@ type Props = {
   feed: NotesListItemProps[];
   /** After saving from the note modal, merge hasContent/title into the list row. */
   feedSyncFromModal?: FeedSyncFromModal | null;
+  /** Called whenever the local notesFeed changes (for optimistic modal opening). */
+  onFeedChange?: (feed: NotesListItemProps[]) => void;
 };
 
 let updateTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -386,6 +388,11 @@ const NotesList: React.FC<Props> = (props) => {
   useEffect(() => {
     isChangedRef.current = isChanged;
   }, [isChanged]);
+
+  useEffect(() => {
+    props.onFeedChange?.(notesFeed);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [notesFeed]);
 
   useEffect(() => {
     const patch = props.feedSyncFromModal;

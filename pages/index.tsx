@@ -371,6 +371,7 @@ const Main: React.FC<Props> = (props) => {
   const router = useRouter();
 
   const [demoDeletedIds, setDemoDeletedIds] = useState<string[]>([]);
+  const localFeedRef = useRef<NotesListItemProps[]>([]);
 
   useEffect(() => {
     queueMicrotask(() => setDemoDeletedIds(readDemoDeletedIds()));
@@ -440,14 +441,9 @@ const Main: React.FC<Props> = (props) => {
     if (!noteIdFromQuery) return;
 
     let cancelled = false;
-    // Avoid synchronous state updates at the top of effect.
-    void Promise.resolve().then(() => {
-      if (cancelled) return;
-      setLoadedNoteId(null);
-      setNoteLoadError(null);
-    });
 
     if (!props.session) {
+      // Demo mode: load from static mock data.
       void Promise.resolve().then(() => {
         if (cancelled) return;
         const data = getDemoNotePayload(noteIdFromQuery);
@@ -468,35 +464,65 @@ const Main: React.FC<Props> = (props) => {
       };
     }
 
-    fetch(`/api/note/${noteIdFromQuery}`)
-      .then(async (r) => {
-        if (!r.ok) {
-          throw new Error(`Failed to load note: ${r.status}`);
-        }
-        return (await r.json()) as {
-          id: string;
-          title: string;
-          content: string;
-          hasContent: boolean;
-          authorName: string;
-          authorEmail: string | null;
-        };
-      })
-      .then((data) => {
-        if (cancelled) return;
-        setNote(data);
-        setLoadedNoteId(data.id);
-        setDraftTitle(data.title ?? '');
-        setDraftContent(data.content ?? '');
-        setIsEdit(false);
+    // Use a microtask so state updates don't fire synchronously inside the effect.
+    void Promise.resolve().then(() => {
+      if (cancelled) return;
+
+      // Optimistic: show local data immediately while the server fetch is in flight.
+      const localNote = localFeedRef.current.find(
+        (n) => n.id === noteIdFromQuery,
+      );
+
+      if (localNote) {
+        setNote({
+          id: localNote.id,
+          title: localNote.title ?? '',
+          content: localNote.content ?? '',
+          hasContent: localNote.hasContent ?? false,
+          authorName: props.session?.user?.name ?? '',
+          authorEmail: props.session?.user?.email ?? null,
+        });
+        setLoadedNoteId(localNote.id);
+        setDraftTitle(localNote.title ?? '');
+        setDraftContent(localNote.content ?? '');
+        setIsEdit(true);
         setDidAutoEnterEdit(false);
         setIsTitleInputOpen(false);
-      })
-      .catch((e) => {
-        if (cancelled) return;
-        console.error(e);
-        setNoteLoadError(e?.message ?? 'Failed to load note');
-      });
+      } else {
+        setLoadedNoteId(null);
+        setNoteLoadError(null);
+      }
+
+      fetch(`/api/note/${noteIdFromQuery}`)
+        .then(async (r) => {
+          if (!r.ok) throw new Error(`Failed to load note: ${r.status}`);
+          return (await r.json()) as {
+            id: string;
+            title: string;
+            content: string;
+            hasContent: boolean;
+            authorName: string;
+            authorEmail: string | null;
+          };
+        })
+        .then((data) => {
+          if (cancelled) return;
+          setNote(data);
+          setLoadedNoteId(data.id);
+          setDraftTitle(data.title ?? '');
+          setDraftContent(data.content ?? '');
+          setIsEdit(false);
+          setDidAutoEnterEdit(false);
+          setIsTitleInputOpen(false);
+        })
+        .catch((e) => {
+          if (cancelled) return;
+          // If we showed optimistic data, keep it — note just isn't on server yet.
+          if (localNote) return;
+          console.error(e);
+          setNoteLoadError(e?.message ?? 'Failed to load note');
+        });
+    });
 
     return () => {
       cancelled = true;
@@ -731,6 +757,9 @@ const Main: React.FC<Props> = (props) => {
             <NotesList
               feed={props.session ? props.feed : demoFeed}
               feedSyncFromModal={feedSyncFromModal}
+              onFeedChange={(feed) => {
+                localFeedRef.current = feed;
+              }}
             />
           </div>
         </main>
