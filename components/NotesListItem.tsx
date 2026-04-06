@@ -7,6 +7,7 @@ import React, {
 } from 'react';
 import { useKeyPress } from '@/lib/useKeyPress';
 import { applyInlineMarkdown, handleUrlPaste } from '@/lib/markdownInput';
+import { useAutoResizeTextarea } from '@/lib/useAutoResizeTextarea';
 import { getFamily } from '@/lib/notesTree';
 import styles from '@/components/NotesListItem.module.scss';
 import { useNotes } from '@/components/NotesContext';
@@ -72,6 +73,8 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
   const [prevTitle, setPrevTitle] = useState(props.title);
   const [isNew, setIsNew] = useState(props.isNew);
   const isEditing = props.isEdit && props.isFocus;
+  const { callbackRef: titleTextareaCallbackRef } =
+    useAutoResizeTextarea(title);
   const isLeaf = (props.familyCount ?? 1) === 1;
   const hasCommittedRef = useRef(false);
 
@@ -345,43 +348,40 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
         ) : (
           <>
             <div className={styles.notes_list_item_form}>
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  commitTitle();
+              <textarea
+                rows={1}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Title"
+                value={title}
+                onBlur={() => commitTitle()}
+                onPaste={(e) => {
+                  if (handleUrlPaste(e, setTitle)) e.preventDefault();
                 }}
-              >
-                <input
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="Title"
-                  type="text"
-                  value={title}
-                  onBlur={() => commitTitle()}
-                  onPaste={(e) => {
-                    if (handleUrlPaste(e, setTitle)) e.preventDefault();
-                  }}
-                  onKeyDown={(e) => {
-                    const isMod = e.metaKey || e.ctrlKey;
-                    if (isMod && e.key === 'b') {
-                      e.preventDefault();
-                      applyInlineMarkdown(e.currentTarget, '**', setTitle);
-                    } else if (isMod && e.key === 'i') {
-                      e.preventDefault();
-                      applyInlineMarkdown(e.currentTarget, '*', setTitle);
-                    } else if (e.key === 'Escape') {
-                      e.preventDefault();
-                      hasCommittedRef.current = true;
-                      if (!isNew) setTitle(prevTitle);
-                      props.onCancel(isNew, id, parentId, sort);
-                    }
-                  }}
-                  ref={(el) => {
-                    if (el && props.isFocus) {
-                      el.focus({ preventScroll: true });
-                    }
-                  }}
-                />
-              </form>
+                onKeyDown={(e) => {
+                  const isMod = e.metaKey || e.ctrlKey;
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    commitTitle();
+                  } else if (isMod && e.key === 'b') {
+                    e.preventDefault();
+                    applyInlineMarkdown(e.currentTarget, '**', setTitle);
+                  } else if (isMod && e.key === 'i') {
+                    e.preventDefault();
+                    applyInlineMarkdown(e.currentTarget, '*', setTitle);
+                  } else if (e.key === 'Escape') {
+                    e.preventDefault();
+                    hasCommittedRef.current = true;
+                    if (!isNew) setTitle(prevTitle);
+                    props.onCancel(isNew, id, parentId, sort);
+                  }
+                }}
+                ref={(el) => {
+                  titleTextareaCallbackRef(el);
+                  if (el && props.isFocus) {
+                    el.focus({ preventScroll: true });
+                  }
+                }}
+              />
             </div>
           </>
         )}

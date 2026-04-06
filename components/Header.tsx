@@ -14,8 +14,23 @@ const Header: React.FC = () => {
 
   const left = (
     <div className={styles.left}>
-      <Link href="/" className="logo" data-active={isActive('/')}>
-        RootNote
+      <Link
+        href="/"
+        className={styles.brand}
+        data-active={isActive('/') ? 'true' : 'false'}
+        aria-label="RootNote"
+      >
+        <img
+          className={styles.logoImg}
+          src="/logo.svg"
+          alt=""
+          width={100}
+          height={55}
+          decoding="async"
+        />
+        <span className={styles.alpha} aria-hidden="true">
+          alpha
+        </span>
       </Link>
     </div>
   );

@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useAutoResizeTextarea } from '@/lib/useAutoResizeTextarea';
 import { GetServerSideProps } from 'next';
 import Layout from '@/components/Layout';
 import NotesList from '@/components/NotesList';
@@ -422,10 +423,12 @@ const Main: React.FC<Props> = (props) => {
   const isEditUI = isEdit || shouldAutoEnterEdit;
 
   const [isTitleInputOpen, setIsTitleInputOpen] = useState(false);
-  const titleInputRef = useRef<HTMLInputElement | null>(null);
 
   const [draftTitle, setDraftTitle] = useState('');
   const [draftContent, setDraftContent] = useState('');
+
+  const { ref: titleInputRef, callbackRef: titleInputCallbackRef } =
+    useAutoResizeTextarea(draftTitle);
 
   const [feedSyncFromModal, setFeedSyncFromModal] = useState<{
     rev: number;
@@ -548,7 +551,7 @@ const Main: React.FC<Props> = (props) => {
         titleInputRef.current?.focus();
       });
     }
-  }, [isEditUI, isTitleInputOpen]);
+  }, [isEditUI, isTitleInputOpen, titleInputRef]);
 
   const normalizeContent = (value: string | null | undefined): string => {
     const raw = value ?? '';
@@ -752,7 +755,9 @@ const Main: React.FC<Props> = (props) => {
       <div className="page">
         <main>
           <div>
+            {/*
             <h1>{props.session ? 'Notes' : 'Demo'}</h1>
+            */}
 
             <NotesList
               feed={props.session ? props.feed : demoFeed}
@@ -785,12 +790,14 @@ const Main: React.FC<Props> = (props) => {
             <div className="modal_header">
               {isEditUI ? (
                 isTitleInputOpen ? (
-                  <input
-                    ref={titleInputRef}
+                  <textarea
+                    rows={1}
+                    ref={(el) => {
+                      titleInputCallbackRef(el);
+                    }}
                     className="modal_title_input"
                     onChange={(e) => setDraftTitle(e.target.value)}
                     placeholder="Title"
-                    type="text"
                     value={draftTitle}
                     onBlur={() => setIsTitleInputOpen(false)}
                     onPaste={(e) => {
@@ -798,7 +805,10 @@ const Main: React.FC<Props> = (props) => {
                     }}
                     onKeyDown={(e) => {
                       const isMod = e.metaKey || e.ctrlKey;
-                      if (isMod && e.key === 'b') {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        setIsTitleInputOpen(false);
+                      } else if (isMod && e.key === 'b') {
                         e.preventDefault();
                         applyInlineMarkdown(
                           e.currentTarget,
