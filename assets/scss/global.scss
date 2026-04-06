@@ -21,10 +21,10 @@ $basic-color: #000;
   --accent: #0070f3;
   --danger: #e11d48;
 
-  /* Priorities */
-  --priority-1: #b02020;
-  --priority-2: #205cb0;
-  --priority-3: #239246;
+  /* Priorities (1 = high: logo checkmark #D43C3C; 2/3 matched in weight & saturation) */
+  --priority-1: #d43c3c;
+  --priority-2: #386fad;
+  --priority-3: #3a8f62;
 
   /* Shadows & rings */
   --shadow-hover: 1px 1px 3px #aaa;

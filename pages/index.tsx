@@ -17,9 +17,11 @@ if (typeof document !== 'undefined') {
   Modal.setAppElement('#__next');
 }
 
-/** Demo feed: same fields as Prisma `Note` used in the list + body (`content` / `hasContent`). */
+/**
+ * Demo feed: same fields as Prisma `Note` in the list + body (`content` / `hasContent`).
+ */
 const mockNotes: NotesListItemProps[] = [
-  // === Travel project ===
+  // === Travel (first root tree) ===
   {
     id: '1',
     title: 'Family trip',
@@ -33,13 +35,13 @@ const mockNotes: NotesListItemProps[] = [
   },
   {
     id: '2',
-    title: 'Important this week: where we go and what to see',
+    title: 'This week: where we go & what to see',
     content: `**Shortlist**
 - Rome / Florence — art & food
 - Train between cities — book early
 
 **Open questions**
-- Exact dates with school holidays`,
+- Dates vs school holidays`,
     sort: 0,
     parentId: '1',
     collapsed: false,
@@ -50,10 +52,10 @@ const mockNotes: NotesListItemProps[] = [
   },
   {
     id: '3',
-    title: 'Italy',
-    content: `Been before — focus on **Tuscany** this time.
+    title: 'Italy — Tuscany & trains',
+    content: `Focus on **Tuscany** this time.
 
-- [ ] Agriturismo options
+- [ ] Agriturismo
 - [ ] Car vs trains`,
     sort: 0,
     parentId: '2',
@@ -64,7 +66,7 @@ const mockNotes: NotesListItemProps[] = [
   },
   {
     id: '4',
-    title: 'Greece — only if we have time, no rush',
+    title: 'Greece — if we have time',
     content: '',
     sort: 1,
     parentId: '2',
@@ -86,12 +88,23 @@ const mockNotes: NotesListItemProps[] = [
     authorId: null,
   },
   {
+    id: '22',
+    title:
+      '**Outbound** booked — *return* still open · [seat map](https://www.google.com/flights)',
+    content: '',
+    sort: 2,
+    parentId: '1',
+    collapsed: false,
+    complete: false,
+    hasContent: false,
+    authorId: null,
+  },
+  {
     id: '6',
-    title: 'Urgent: flights — fares are climbing',
-    content: `Tracked on Google Flights — **+12%** vs last week on our dates.
+    title: 'Flights — fares climbing',
+    content: `Google Flights — **+12%** vs last week on our dates.
 
-Airline A: flexible fare still OK.
-Airline B: basic only — skip.`,
+Airline A: flexible fare OK · Airline B: basic only — skip.`,
     sort: 0,
     parentId: '5',
     collapsed: false,
@@ -102,11 +115,11 @@ Airline B: basic only — skip.`,
   },
   {
     id: '7',
-    title: 'Hotels — shortlist (demo)',
-    content: `**Center** — (demo), about €120–180  
-**Near station** — (demo), about €90–130
+    title: 'Hotels — shortlist',
+    content: `**Center** — demo €120–180  
+**Near station** — demo €90–130
 
-Free cancellation until 48h — prioritize.`,
+Free cancel 48h — prioritize.`,
     sort: 1,
     parentId: '5',
     collapsed: false,
@@ -115,18 +128,141 @@ Free cancellation until 48h — prioritize.`,
     authorId: null,
   },
 
+  // === Second root tree (nested headings + real rows) ===
+  {
+    id: '19',
+    title: '# Website relaunch',
+    content: '',
+    sort: 1,
+    parentId: 'root',
+    collapsed: false,
+    complete: false,
+    hasContent: false,
+    authorId: null,
+  },
+  {
+    id: '23',
+    title: 'Copy deck due Wednesday — legal still reviewing',
+    content: '',
+    sort: 0,
+    parentId: '19',
+    collapsed: false,
+    complete: false,
+    hasContent: false,
+    authorId: null,
+  },
+  {
+    id: '24',
+    title: 'Hero image: design owes us two crops by EOD',
+    content: '',
+    sort: 1,
+    parentId: '19',
+    collapsed: false,
+    complete: false,
+    hasContent: false,
+    authorId: null,
+  },
+  {
+    id: '25',
+    title: 'Pricing page — numbers confirmed with finance',
+    content: '',
+    sort: 2,
+    parentId: '19',
+    collapsed: false,
+    complete: false,
+    hasContent: false,
+    authorId: null,
+  },
+  {
+    id: '20',
+    title: '## QA & staging',
+    content: '',
+    sort: 3,
+    parentId: '19',
+    collapsed: false,
+    complete: false,
+    hasContent: false,
+    authorId: null,
+  },
+  {
+    id: '26',
+    title: 'Smoke test on staging before demo Friday',
+    content: '',
+    sort: 0,
+    parentId: '20',
+    collapsed: false,
+    complete: false,
+    hasContent: false,
+    authorId: null,
+  },
+  {
+    id: '27',
+    title: 'Safari scroll bug — ticket RN-204, in progress',
+    content: '',
+    sort: 1,
+    parentId: '20',
+    collapsed: false,
+    complete: false,
+    hasContent: false,
+    authorId: null,
+  },
+  {
+    id: '21',
+    title: '### Go-live',
+    content: '',
+    sort: 2,
+    parentId: '20',
+    collapsed: false,
+    complete: false,
+    hasContent: false,
+    authorId: null,
+  },
+  {
+    id: '28',
+    title: 'Deploy window 6–8 am CET — ping releases channel',
+    content: '',
+    sort: 0,
+    parentId: '21',
+    collapsed: false,
+    complete: false,
+    hasContent: false,
+    authorId: null,
+  },
+  {
+    id: '29',
+    title: 'Post-mortem template — link in repo wiki',
+    content: '',
+    sort: 1,
+    parentId: '21',
+    collapsed: false,
+    complete: false,
+    hasContent: false,
+    authorId: null,
+  },
+  {
+    id: '30',
+    title: 'Customer email draft — waiting on marketing sign-off',
+    content: '',
+    sort: 2,
+    parentId: '21',
+    collapsed: false,
+    complete: false,
+    hasContent: false,
+    authorId: null,
+  },
+
   // === Work ===
   {
     id: '8',
-    title: 'Important: internal tooling — sync with the team',
+    title: 'Work: tooling & releases',
     content: `### Next sync
 - Pain: deploy times
-- Proposal: one shared CLI wrapper
+- Proposal: shared CLI wrapper
 
-_No decisions — collect feedback first._`,
-    sort: 1,
+_No decisions — gather feedback first._`,
+    sort: 2,
     parentId: 'root',
-    collapsed: true,
+    collapsed: false,
     complete: false,
     priority: 2,
     hasContent: true,
@@ -135,10 +271,10 @@ _No decisions — collect feedback first._`,
   {
     id: '9',
     title: 'CI/CD pipeline refresh',
-    content: `Stages: **build → test → deploy**
+    content: `**build → test → deploy**
 
-- Add cache for deps
-- Parallelize slow suite (split by folder)
+- Cache deps
+- Parallelize slow suite by folder
 
 Branch: \`chore/ci-speed\` (demo)`,
     sort: 0,
@@ -150,7 +286,7 @@ Branch: \`chore/ci-speed\` (demo)`,
   },
   {
     id: '10',
-    title: 'Monitoring — can wait until after the release',
+    title: 'Monitoring — after release',
     content: '',
     sort: 1,
     parentId: '8',
@@ -162,12 +298,12 @@ Branch: \`chore/ci-speed\` (demo)`,
   },
   {
     id: '11',
-    title: 'Urgent: alert thresholds — prod is on fire',
-    content: `**Symptom:** p95 latency + error spike on checkout API.
+    title: 'Alert thresholds — checkout spike',
+    content: `**Symptom:** p95 latency + errors on checkout API.
 
-**Hypothesis:** DB pool exhausted — bump max + add timeout alert.
+**Hypothesis:** DB pool exhausted — raise max + alert on timeouts.
 
-**Action:** hotfix thresholds tonight; proper fix tomorrow.`,
+**Action:** hotfix tonight; proper fix tomorrow.`,
     sort: 0,
     parentId: '10',
     collapsed: false,
@@ -178,10 +314,10 @@ Branch: \`chore/ci-speed\` (demo)`,
   },
   {
     id: '12',
-    title: 'Log aggregation',
-    content: `Stack: **Vector** → S3 → Athena for ad-hoc.
+    title: 'Log aggregation — Vector → S3',
+    content: `**Vector** → S3 → Athena for ad-hoc queries.
 
-On-call runbook: wiki/demo-link (placeholder).`,
+On-call: wiki / demo runbook (placeholder).`,
     sort: 1,
     parentId: '10',
     collapsed: false,
@@ -195,7 +331,7 @@ On-call runbook: wiki/demo-link (placeholder).`,
     id: '13',
     title: 'Reading list',
     content: '',
-    sort: 2,
+    sort: 3,
     parentId: 'root',
     collapsed: false,
     complete: false,
@@ -215,12 +351,12 @@ On-call runbook: wiki/demo-link (placeholder).`,
   },
   {
     id: '15',
-    title: '1984 — finish by the weekend',
-    content: `Part 1 done. Part 2 start after Ch. 5.
+    title: '1984 — finish this weekend',
+    content: `Part 1 done · Part 2 after Ch. 5.
 
-Themes to track: **surveillance**, language, truth.
+Themes: **surveillance**, language, truth.
 
-Quote to revisit: *Who controls the past...*`,
+*Who controls the past…*`,
     sort: 0,
     parentId: '14',
     collapsed: false,
@@ -253,10 +389,10 @@ Quote to revisit: *Who controls the past...*`,
   },
   {
     id: '18',
-    title: 'Sapiens — someday, no deadline',
-    content: `Skimmed intro — full read when travel planning settles.
+    title: 'Sapiens — someday',
+    content: `Skimmed intro — full read when travel plans settle.
 
-Interesting bit: cognitive revolution vs fiction — ties to planning doc.`,
+Cognitive revolution vs fiction — ties to planning notes.`,
     sort: 0,
     parentId: '17',
     collapsed: false,

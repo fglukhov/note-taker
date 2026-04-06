@@ -32,13 +32,14 @@ export const removeFamily = (
   return removeFamily(id, more, s, [...r, node]);
 };
 
+/** Steps from root list: direct children of `root` → 0, their children → 1, etc. */
 export const getNoteDepth = (
   id: string,
   feed: NotesListItemProps[],
 ): number => {
   let depth = 0;
   let current = feed.find((n) => n.id === id);
-  while (current?.parentId) {
+  while (current?.parentId && current.parentId !== 'root') {
     depth++;
     current = feed.find((n) => n.id === current!.parentId);
     if (depth > 20) break;
