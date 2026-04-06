@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useAutoResizeTextarea } from '@/lib/useAutoResizeTextarea';
 import { GetServerSideProps } from 'next';
 import Layout from '@/components/Layout';
 import NotesList from '@/components/NotesList';
@@ -11,7 +12,7 @@ import ReactMarkdown from 'react-markdown';
 import { X } from 'react-feather';
 import MarkdownNoteEditor from '@/components/MarkdownNoteEditor';
 import { getFamily } from '@/lib/notesTree';
-import { applyInlineMarkdown } from '@/lib/markdownInput';
+import { applyInlineMarkdown, handleUrlPaste } from '@/lib/markdownInput';
 if (typeof document !== 'undefined') {
   Modal.setAppElement('#__next');
 }
@@ -371,6 +372,7 @@ const Main: React.FC<Props> = (props) => {
   const router = useRouter();
 
   const [demoDeletedIds, setDemoDeletedIds] = useState<string[]>([]);
+  const localFeedRef = useRef<NotesListItemProps[]>([]);
 
   useEffect(() => {
     queueMicrotask(() => setDemoDeletedIds(readDemoDeletedIds()));
@@ -421,10 +423,12 @@ const Main: React.FC<Props> = (props) => {
   const isEditUI = isEdit || shouldAutoEnterEdit;
 
   const [isTitleInputOpen, setIsTitleInputOpen] = useState(false);
-  const titleInputRef = useRef<HTMLInputElement | null>(null);
 
   const [draftTitle, setDraftTitle] = useState('');
   const [draftContent, setDraftContent] = useState('');
+
+  const { ref: titleInputRef, callbackRef: titleInputCallbackRef } =
+    useAutoResizeTextarea(draftTitle);
 
   const [feedSyncFromModal, setFeedSyncFromModal] = useState<{
     rev: number;
@@ -440,14 +444,9 @@ const Main: React.FC<Props> = (props) => {
     if (!noteIdFromQuery) return;
 
     let cancelled = false;
-    // Avoid synchronous state updates at the top of effect.
-    void Promise.resolve().then(() => {
-      if (cancelled) return;
-      setLoadedNoteId(null);
-      setNoteLoadError(null);
-    });
 
     if (!props.session) {
+      // Demo mode: load from static mock data.
       void Promise.resolve().then(() => {
         if (cancelled) return;
         const data = getDemoNotePayload(noteIdFromQuery);
@@ -468,35 +467,65 @@ const Main: React.FC<Props> = (props) => {
       };
     }
 
-    fetch(`/api/note/${noteIdFromQuery}`)
-      .then(async (r) => {
-        if (!r.ok) {
-          throw new Error(`Failed to load note: ${r.status}`);
-        }
-        return (await r.json()) as {
-          id: string;
-          title: string;
-          content: string;
-          hasContent: boolean;
-          authorName: string;
-          authorEmail: string | null;
-        };
-      })
-      .then((data) => {
-        if (cancelled) return;
-        setNote(data);
-        setLoadedNoteId(data.id);
-        setDraftTitle(data.title ?? '');
-        setDraftContent(data.content ?? '');
-        setIsEdit(false);
+    // Use a microtask so state updates don't fire synchronously inside the effect.
+    void Promise.resolve().then(() => {
+      if (cancelled) return;
+
+      // Optimistic: show local data immediately while the server fetch is in flight.
+      const localNote = localFeedRef.current.find(
+        (n) => n.id === noteIdFromQuery,
+      );
+
+      if (localNote) {
+        setNote({
+          id: localNote.id,
+          title: localNote.title ?? '',
+          content: localNote.content ?? '',
+          hasContent: localNote.hasContent ?? false,
+          authorName: props.session?.user?.name ?? '',
+          authorEmail: props.session?.user?.email ?? null,
+        });
+        setLoadedNoteId(localNote.id);
+        setDraftTitle(localNote.title ?? '');
+        setDraftContent(localNote.content ?? '');
+        setIsEdit(true);
         setDidAutoEnterEdit(false);
         setIsTitleInputOpen(false);
-      })
-      .catch((e) => {
-        if (cancelled) return;
-        console.error(e);
-        setNoteLoadError(e?.message ?? 'Failed to load note');
-      });
+      } else {
+        setLoadedNoteId(null);
+        setNoteLoadError(null);
+      }
+
+      fetch(`/api/note/${noteIdFromQuery}`)
+        .then(async (r) => {
+          if (!r.ok) throw new Error(`Failed to load note: ${r.status}`);
+          return (await r.json()) as {
+            id: string;
+            title: string;
+            content: string;
+            hasContent: boolean;
+            authorName: string;
+            authorEmail: string | null;
+          };
+        })
+        .then((data) => {
+          if (cancelled) return;
+          setNote(data);
+          setLoadedNoteId(data.id);
+          setDraftTitle(data.title ?? '');
+          setDraftContent(data.content ?? '');
+          setIsEdit(false);
+          setDidAutoEnterEdit(false);
+          setIsTitleInputOpen(false);
+        })
+        .catch((e) => {
+          if (cancelled) return;
+          // If we showed optimistic data, keep it — note just isn't on server yet.
+          if (localNote) return;
+          console.error(e);
+          setNoteLoadError(e?.message ?? 'Failed to load note');
+        });
+    });
 
     return () => {
       cancelled = true;
@@ -522,7 +551,7 @@ const Main: React.FC<Props> = (props) => {
         titleInputRef.current?.focus();
       });
     }
-  }, [isEditUI, isTitleInputOpen]);
+  }, [isEditUI, isTitleInputOpen, titleInputRef]);
 
   const normalizeContent = (value: string | null | undefined): string => {
     const raw = value ?? '';
@@ -726,11 +755,16 @@ const Main: React.FC<Props> = (props) => {
       <div className="page">
         <main>
           <div>
+            {/*
             <h1>{props.session ? 'Notes' : 'Demo'}</h1>
+            */}
 
             <NotesList
               feed={props.session ? props.feed : demoFeed}
               feedSyncFromModal={feedSyncFromModal}
+              onFeedChange={(feed) => {
+                localFeedRef.current = feed;
+              }}
             />
           </div>
         </main>
@@ -756,17 +790,25 @@ const Main: React.FC<Props> = (props) => {
             <div className="modal_header">
               {isEditUI ? (
                 isTitleInputOpen ? (
-                  <input
-                    ref={titleInputRef}
+                  <textarea
+                    rows={1}
+                    ref={(el) => {
+                      titleInputCallbackRef(el);
+                    }}
                     className="modal_title_input"
                     onChange={(e) => setDraftTitle(e.target.value)}
                     placeholder="Title"
-                    type="text"
                     value={draftTitle}
                     onBlur={() => setIsTitleInputOpen(false)}
+                    onPaste={(e) => {
+                      if (handleUrlPaste(e, setDraftTitle)) e.preventDefault();
+                    }}
                     onKeyDown={(e) => {
                       const isMod = e.metaKey || e.ctrlKey;
-                      if (isMod && e.key === 'b') {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        setIsTitleInputOpen(false);
+                      } else if (isMod && e.key === 'b') {
                         e.preventDefault();
                         applyInlineMarkdown(
                           e.currentTarget,

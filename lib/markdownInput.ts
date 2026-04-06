@@ -1,3 +1,43 @@
+const URL_RE =
+  /^https?:\/\/(www\.)?[-a-zA-Z0-9@:%._+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_+.~#?&/=]*)$/;
+
+/**
+ * Call from an input's onPaste handler.
+ * If the pasted text is a URL:
+ *   - selected text → [selected text](url)
+ *   - no selection  → [url](url)
+ * Returns true if the paste was handled (call e.preventDefault() in that case).
+ */
+export function handleUrlPaste(
+  e: React.ClipboardEvent<HTMLInputElement | HTMLTextAreaElement>,
+  onChange: (value: string) => void,
+): boolean {
+  const pasted = e.clipboardData.getData('text');
+  if (!URL_RE.test(pasted.trim())) return false;
+
+  const url = pasted.trim();
+  const input = e.currentTarget;
+  const { value, selectionStart: ss, selectionEnd: se } = input;
+  if (ss === null || se === null) return false;
+
+  const before = value.slice(0, ss);
+  const selected = value.slice(ss, se);
+  const after = value.slice(se);
+
+  const label = selected || url;
+  const mdLink = `[${label}](${url})`;
+
+  const newValue = before + mdLink + after;
+  const newCursor = ss + mdLink.length;
+
+  onChange(newValue);
+  requestAnimationFrame(() => {
+    input.setSelectionRange(newCursor, newCursor);
+  });
+
+  return true;
+}
+
 /**
  * Toggle inline markdown syntax (e.g. ** or *) around the current selection
  * in a plain <input> or <textarea>.

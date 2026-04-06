@@ -1,0 +1,80 @@
+@import '../assets/scss/vars';
+
+.header {
+  padding-block: 2rem;
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+}
+
+.left {
+  a {
+    text-decoration: none;
+    color: var(--geist-foreground);
+    display: inline-block;
+  }
+
+  a + a {
+    margin-left: 1rem;
+  }
+}
+
+/* Specificity over `.left a { display: inline-block }` so flex works */
+.left a.brand {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: flex-end;
+  gap: 0.5rem;
+  width: fit-content;
+}
+
+.logoImg {
+  display: block;
+  flex-shrink: 0;
+  width: 100px;
+  height: 55px;
+}
+
+.alpha {
+  flex-shrink: 0;
+  font-size: 12px;
+  line-height: 1;
+  font-weight: 400;
+  color: #b0b0b0;
+  letter-spacing: 0.02em;
+}
+
+.right {
+  margin-left: auto;
+
+  a {
+    text-decoration: none;
+    color: var(--geist-foreground);
+    display: inline-block;
+  }
+
+  a + a {
+    margin-left: 1rem;
+  }
+
+  p {
+    display: inline-block;
+    font-size: 13px;
+    padding-right: 1rem;
+  }
+
+  button {
+    border: none;
+    background: #fff;
+    border-radius: 3px;
+
+    a {
+      border: 1px solid var(--geist-foreground);
+      padding: 0.5rem 1rem;
+      border-radius: 3px;
+    }
+  }
+}

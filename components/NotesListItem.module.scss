@@ -9,7 +9,7 @@
 }
 
 .notes_list_item .notes_list_item {
-  margin-left: 20px;
+  margin-left: 30px;
 }
 
 .notes_list_item_title_wrapper + .notes_list_item {
@@ -37,7 +37,7 @@
   margin: -3px -10px;
 }
 
-.notes_list_item_title_wrapper input {
+.notes_list_item_title_wrapper textarea {
   font-family:
     -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial,
     sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';
@@ -48,9 +48,12 @@
   padding: 3px 10px;
   width: 100%;
   border-radius: 2px;
+  resize: none;
+  overflow: hidden;
+  text-decoration: none;
 }
 
-.notes_list_item_title_wrapper input:focus {
+.notes_list_item_title_wrapper textarea:focus {
   outline: 1px solid var(--text-muted);
 }
 
