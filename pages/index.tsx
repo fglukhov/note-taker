@@ -11,7 +11,7 @@ import ReactMarkdown from 'react-markdown';
 import { X } from 'react-feather';
 import MarkdownNoteEditor from '@/components/MarkdownNoteEditor';
 import { getFamily } from '@/lib/notesTree';
-import { applyInlineMarkdown } from '@/lib/markdownInput';
+import { applyInlineMarkdown, handleUrlPaste } from '@/lib/markdownInput';
 if (typeof document !== 'undefined') {
   Modal.setAppElement('#__next');
 }
@@ -764,6 +764,9 @@ const Main: React.FC<Props> = (props) => {
                     type="text"
                     value={draftTitle}
                     onBlur={() => setIsTitleInputOpen(false)}
+                    onPaste={(e) => {
+                      if (handleUrlPaste(e, setDraftTitle)) e.preventDefault();
+                    }}
                     onKeyDown={(e) => {
                       const isMod = e.metaKey || e.ctrlKey;
                       if (isMod && e.key === 'b') {
