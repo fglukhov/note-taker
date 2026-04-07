@@ -36,6 +36,7 @@
     "@prisma/client": "^7.3.0",
     "@uiw/codemirror-theme-github": "^4.25.9",
     "@uiw/react-md-editor": "^4.0.11",
+    "@vercel/analytics": "^2.0.1",
     "eslint-config-next": "^16.1.1",
     "feather-icons": "^4.29.1",
     "feather-icons-react": "^0.7.0",
