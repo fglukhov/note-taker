@@ -6,7 +6,10 @@ import React, {
   useLayoutEffect,
 } from 'react';
 import { useKeyPress } from '@/lib/useKeyPress';
-import { applyInlineMarkdown, handleUrlPaste } from '@/lib/markdownInput';
+import {
+  applyInlineMarkdown,
+  handleTitleMarkdownPaste,
+} from '@/lib/markdownInput';
 import { useAutoResizeTextarea } from '@/lib/useAutoResizeTextarea';
 import { getFamily } from '@/lib/notesTree';
 import styles from '@/components/NotesListItem.module.scss';
@@ -355,7 +358,7 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
                 value={title}
                 onBlur={() => commitTitle()}
                 onPaste={(e) => {
-                  if (handleUrlPaste(e, setTitle)) e.preventDefault();
+                  if (handleTitleMarkdownPaste(e, setTitle)) e.preventDefault();
                 }}
                 onKeyDown={(e) => {
                   const isMod = e.metaKey || e.ctrlKey;
