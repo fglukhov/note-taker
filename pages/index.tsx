@@ -810,7 +810,7 @@ const Main: React.FC<Props> = (props) => {
     persistDraft(draftTitleToPersist, draftContentToPersist);
 
     // Optimistic close: navigate immediately, save in background.
-    router.push('/');
+    router.push({ pathname: '/' }, undefined, { shallow: true });
     void saveNote(draftTitleToPersist, draftContentToPersist)
       .then(() => {
         clearDraft();
