@@ -19,17 +19,24 @@ import Router, { useRouter } from 'next/router';
 // TODO handle page reload on cmd+R
 // TODO restore current position after reload and scroll to it
 
-export type FeedSyncFromModal = {
-  rev: number;
-  noteId: string;
-  hasContent: boolean;
-  title?: string;
-};
+export type FeedModalSync =
+  | {
+      rev: number;
+      kind: 'patch';
+      noteId: string;
+      hasContent: boolean;
+      title?: string;
+    }
+  | {
+      rev: number;
+      kind: 'removeFamily';
+      rootId: string;
+    };
 
 type Props = {
   feed: NotesListItemProps[];
-  /** After saving from the note modal, merge hasContent/title into the list row. */
-  feedSyncFromModal?: FeedSyncFromModal | null;
+  /** One-shot sync from the note modal (save, delete, …). */
+  feedModalSync?: FeedModalSync | null;
   /** Called whenever the local notesFeed changes (for optimistic modal opening). */
   onFeedChange?: (feed: NotesListItemProps[]) => void;
 };
@@ -93,6 +100,35 @@ const markSiblingsForSync = (
     }
   }
 };
+
+export function applyFeedModalSync(
+  prev: NotesListItemProps[],
+  sync: FeedModalSync,
+): NotesListItemProps[] {
+  if (sync.kind === 'patch') {
+    return prev.map((n) =>
+      n.id === sync.noteId
+        ? {
+            ...n,
+            hasContent: sync.hasContent,
+            ...(sync.title !== undefined ? { title: sync.title } : {}),
+          }
+        : n,
+    );
+  }
+
+  const curNote = prev.find((n) => n.id === sync.rootId);
+  if (!curNote) return prev;
+
+  const removedFeed = removeFamily(curNote.id, prev);
+  const remainingIds = new Set(removedFeed.map((n) => n.id));
+  const removedIds = prev
+    .map((n) => n.id)
+    .filter((id) => !remainingIds.has(id));
+  let newFeed = prev.filter((n) => !removedIds.includes(n.id));
+  newFeed = renormalizeSortsForParent(newFeed, curNote.parentId);
+  return newFeed;
+}
 
 const NotesList: React.FC<Props> = (props) => {
   const reorderTimeoutRef = useRef<number | null>(null);
@@ -395,20 +431,24 @@ const NotesList: React.FC<Props> = (props) => {
   }, [notesFeed]);
 
   useEffect(() => {
-    const patch = props.feedSyncFromModal;
-    if (!patch) return;
-    setNotesFeed((prev) =>
-      prev.map((n) =>
-        n.id === patch.noteId
-          ? {
-              ...n,
-              hasContent: patch.hasContent,
-              ...(patch.title !== undefined ? { title: patch.title } : {}),
-            }
-          : n,
-      ),
-    );
-  }, [props.feedSyncFromModal]);
+    const sync = props.feedModalSync;
+    if (!sync) return;
+
+    let clampLen: number | null = null;
+    setNotesFeed((prev) => {
+      const next = applyFeedModalSync(prev, sync);
+      if (sync.kind === 'removeFamily') {
+        clampLen = next.length;
+      }
+      return next;
+    });
+
+    if (clampLen !== null) {
+      setCursorPosition((cp) =>
+        clampLen === 0 ? 0 : Math.min(cp, clampLen - 1),
+      );
+    }
+  }, [props.feedModalSync]);
 
   const findPositionById = useCallback(
     (targetId: string): number | null => {
@@ -1384,7 +1424,11 @@ const NotesList: React.FC<Props> = (props) => {
                     onAdd={handleEdit}
                     onDelete={handleDelete}
                     isNew={note.isNew}
-                    onToggleCollapse={handleToggleCollapse}
+                    onToggleCollapse={(curId, position) => {
+                      handleToggleCollapse(curId);
+                      setCursorPosition(position);
+                      focusId.current = curId;
+                    }}
                     onComplete={handleLeafCompleteChange}
                   />
                 );

@@ -6,7 +6,10 @@ import React, {
   useLayoutEffect,
 } from 'react';
 import { useKeyPress } from '@/lib/useKeyPress';
-import { applyInlineMarkdown, handleUrlPaste } from '@/lib/markdownInput';
+import {
+  applyInlineMarkdown,
+  handleTitleMarkdownPaste,
+} from '@/lib/markdownInput';
 import { useAutoResizeTextarea } from '@/lib/useAutoResizeTextarea';
 import { getFamily } from '@/lib/notesTree';
 import styles from '@/components/NotesListItem.module.scss';
@@ -62,7 +65,7 @@ export type NotesListItemProps = {
     familyCount: number,
     collapsed?: boolean,
   ) => void;
-  onToggleCollapse?: (noteId: string) => void;
+  onToggleCollapse?: (noteId: string, position: number) => void;
 };
 
 const NotesListItem: React.FC<NotesListItemProps> = (props) => {
@@ -265,7 +268,7 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
                   className={styles.notes_list_item_arrow}
                   onClick={(e) => {
                     e.stopPropagation();
-                    props.onToggleCollapse?.(id);
+                    props.onToggleCollapse?.(id, props.position);
                   }}
                   onDoubleClick={(e) => {
                     e.preventDefault();
@@ -355,7 +358,7 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
                 value={title}
                 onBlur={() => commitTitle()}
                 onPaste={(e) => {
-                  if (handleUrlPaste(e, setTitle)) e.preventDefault();
+                  if (handleTitleMarkdownPaste(e, setTitle)) e.preventDefault();
                 }}
                 onKeyDown={(e) => {
                   const isMod = e.metaKey || e.ctrlKey;

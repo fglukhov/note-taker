@@ -2,8 +2,9 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useAutoResizeTextarea } from '@/lib/useAutoResizeTextarea';
 import { GetServerSideProps } from 'next';
 import Layout from '@/components/Layout';
-import NotesList from '@/components/NotesList';
+import NotesList, { FeedModalSync } from '@/components/NotesList';
 import { NotesListItemProps } from '@/components/NotesListItem';
+import { Button } from '@/components/Button';
 import prisma from '@/lib/prisma';
 import { getSession } from 'next-auth/react';
 import { useRouter } from 'next/router';
@@ -12,7 +13,10 @@ import ReactMarkdown from 'react-markdown';
 import { X } from 'react-feather';
 import MarkdownNoteEditor from '@/components/MarkdownNoteEditor';
 import { getFamily } from '@/lib/notesTree';
-import { applyInlineMarkdown, handleUrlPaste } from '@/lib/markdownInput';
+import {
+  applyInlineMarkdown,
+  handleTitleMarkdownPaste,
+} from '@/lib/markdownInput';
 if (typeof document !== 'undefined') {
   Modal.setAppElement('#__next');
 }
@@ -553,25 +557,20 @@ const Main: React.FC<Props> = (props) => {
   const canEditNoteLikeOwner =
     !userHasValidSession || (userHasValidSession && noteBelongsToUser);
 
-  const [isEdit, setIsEdit] = useState(false);
-  const [didAutoEnterEdit, setDidAutoEnterEdit] = useState(false);
-  const shouldAutoEnterEdit = canEditNoteLikeOwner && !didAutoEnterEdit;
-  const isEditUI = isEdit || shouldAutoEnterEdit;
-
   const [isTitleInputOpen, setIsTitleInputOpen] = useState(false);
 
   const [draftTitle, setDraftTitle] = useState('');
   const [draftContent, setDraftContent] = useState('');
+  const [lastSavedTitle, setLastSavedTitle] = useState('');
+  const [lastSavedContent, setLastSavedContent] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
 
   const { ref: titleInputRef, callbackRef: titleInputCallbackRef } =
     useAutoResizeTextarea(draftTitle);
 
-  const [feedSyncFromModal, setFeedSyncFromModal] = useState<{
-    rev: number;
-    noteId: string;
-    hasContent: boolean;
-    title?: string;
-  } | null>(null);
+  const [feedModalSync, setFeedModalSync] = useState<FeedModalSync | null>(
+    null,
+  );
 
   // Modal needs appElement to be configured before first client render.
 
@@ -594,8 +593,6 @@ const Main: React.FC<Props> = (props) => {
         setLoadedNoteId(data.id);
         setDraftTitle(data.title ?? '');
         setDraftContent(data.content ?? '');
-        setIsEdit(false);
-        setDidAutoEnterEdit(false);
         setIsTitleInputOpen(false);
       });
       return () => {
@@ -624,8 +621,6 @@ const Main: React.FC<Props> = (props) => {
         setLoadedNoteId(localNote.id);
         setDraftTitle(localNote.title ?? '');
         setDraftContent(localNote.content ?? '');
-        setIsEdit(true);
-        setDidAutoEnterEdit(false);
         setIsTitleInputOpen(false);
       } else {
         setLoadedNoteId(null);
@@ -650,8 +645,6 @@ const Main: React.FC<Props> = (props) => {
           setLoadedNoteId(data.id);
           setDraftTitle(data.title ?? '');
           setDraftContent(data.content ?? '');
-          setIsEdit(false);
-          setDidAutoEnterEdit(false);
           setIsTitleInputOpen(false);
         })
         .catch((e) => {
@@ -669,30 +662,30 @@ const Main: React.FC<Props> = (props) => {
   }, [noteIdFromQuery, router, isRouterReady, props.session]);
 
   useEffect(() => {
-    if (!shouldAutoEnterEdit) return;
-    void Promise.resolve().then(() => {
-      setIsEdit(true);
-      setIsTitleInputOpen(false);
-      setDidAutoEnterEdit(true);
-    });
-  }, [shouldAutoEnterEdit]);
-
-  useEffect(() => {
-    if (!isEditUI) {
-      void Promise.resolve().then(() => setIsTitleInputOpen(false));
-      return;
-    }
     if (isTitleInputOpen) {
       requestAnimationFrame(() => {
         titleInputRef.current?.focus();
       });
     }
-  }, [isEditUI, isTitleInputOpen, titleInputRef]);
+  }, [isTitleInputOpen, titleInputRef]);
 
   const normalizeContent = (value: string | null | undefined): string => {
     const raw = value ?? '';
     return raw.trim().length > 0 ? raw : '';
   };
+
+  useEffect(() => {
+    if (!note || loadedNoteId !== note.id) return;
+    setLastSavedTitle(note.title ?? '');
+    setLastSavedContent(normalizeContent(note.content));
+  }, [note, loadedNoteId]);
+
+  const isDraftDirty = useMemo(() => {
+    return (
+      draftTitle !== lastSavedTitle ||
+      normalizeContent(draftContent) !== normalizeContent(lastSavedContent)
+    );
+  }, [draftTitle, draftContent, lastSavedTitle, lastSavedContent]);
 
   const draftKey = note ? `note-draft:${note.id}` : null;
 
@@ -739,8 +732,9 @@ const Main: React.FC<Props> = (props) => {
           hasContent,
         };
       });
-      setFeedSyncFromModal({
+      setFeedModalSync({
         rev: Date.now(),
+        kind: 'patch',
         noteId: note.id,
         hasContent,
         title: body.title,
@@ -778,18 +772,26 @@ const Main: React.FC<Props> = (props) => {
       };
     });
 
-    setFeedSyncFromModal({
+    setFeedModalSync({
       rev: Date.now(),
+      kind: 'patch',
       noteId: note.id,
       hasContent: Boolean(updated.hasContent),
       ...(typeof updated.title === 'string' ? { title: updated.title } : {}),
     });
 
-    return updated;
+    const resolvedTitle = updated.title ?? body.title;
+    const resolvedContent = updated.content ?? body.content;
+
+    return {
+      title: resolvedTitle,
+      content: resolvedContent,
+      hasContent: Boolean(updated.hasContent),
+    };
   };
 
   const saveAndExit = () => {
-    const canPersistOnClose = isEditUI && canEditNoteLikeOwner;
+    const canPersistOnClose = canEditNoteLikeOwner;
 
     if (typeof window !== 'undefined' && note?.id) {
       sessionStorage.setItem('notes:last-focus-id', String(note.id));
@@ -808,7 +810,7 @@ const Main: React.FC<Props> = (props) => {
     persistDraft(draftTitleToPersist, draftContentToPersist);
 
     // Optimistic close: navigate immediately, save in background.
-    router.push('/');
+    router.push({ pathname: '/' }, undefined, { shallow: true });
     void saveNote(draftTitleToPersist, draftContentToPersist)
       .then(() => {
         clearDraft();
@@ -820,15 +822,21 @@ const Main: React.FC<Props> = (props) => {
 
   const editData = async (e: React.SyntheticEvent) => {
     e.preventDefault();
+    if (!isDraftDirty || isSaving) return;
     try {
+      setIsSaving(true);
       const draftTitleToSave = draftTitle;
       const draftContentToSave = draftContent ?? '';
-      await saveNote(draftTitleToSave, draftContentToSave);
+      const persisted = await saveNote(draftTitleToSave, draftContentToSave);
       clearDraft();
-      setIsEdit(false);
-      setIsTitleInputOpen(false);
+      if (persisted) {
+        setDraftTitle(persisted.title);
+        setDraftContent(persisted.content);
+      }
     } catch (error) {
       console.error(error);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -845,19 +853,23 @@ const Main: React.FC<Props> = (props) => {
           localStorage.removeItem(DEMO_NOTE_STORAGE_PREFIX + rid);
         }
       }
+      setFeedModalSync({
+        rev: Date.now(),
+        kind: 'removeFamily',
+        rootId: id,
+      });
       router.push('/');
       return;
     }
     await fetch(`/api/post/${id}`, {
       method: 'DELETE',
     });
+    setFeedModalSync({
+      rev: Date.now(),
+      kind: 'removeFamily',
+      rootId: id,
+    });
     router.push('/');
-  };
-
-  const handleCancelEdit = () => {
-    setIsEdit(false);
-    setIsTitleInputOpen(false);
-    setDidAutoEnterEdit(true);
   };
 
   useEffect(() => {
@@ -897,7 +909,7 @@ const Main: React.FC<Props> = (props) => {
 
             <NotesList
               feed={props.session ? props.feed : demoFeed}
-              feedSyncFromModal={feedSyncFromModal}
+              feedModalSync={feedModalSync}
               onFeedChange={(feed) => {
                 localFeedRef.current = feed;
               }}
@@ -924,7 +936,7 @@ const Main: React.FC<Props> = (props) => {
         ) : (
           <div className="modal_inner">
             <div className="modal_header">
-              {isEditUI ? (
+              {canEditNoteLikeOwner ? (
                 isTitleInputOpen ? (
                   <textarea
                     rows={1}
@@ -937,7 +949,8 @@ const Main: React.FC<Props> = (props) => {
                     value={draftTitle}
                     onBlur={() => setIsTitleInputOpen(false)}
                     onPaste={(e) => {
-                      if (handleUrlPaste(e, setDraftTitle)) e.preventDefault();
+                      if (handleTitleMarkdownPaste(e, setDraftTitle))
+                        e.preventDefault();
                     }}
                     onKeyDown={(e) => {
                       const isMod = e.metaKey || e.ctrlKey;
@@ -1010,7 +1023,7 @@ const Main: React.FC<Props> = (props) => {
               </button>
             </div>
 
-            {isEditUI ? (
+            {canEditNoteLikeOwner ? (
               <form onSubmit={editData} className="editor_form">
                 <MarkdownNoteEditor
                   value={draftContent}
@@ -1020,70 +1033,28 @@ const Main: React.FC<Props> = (props) => {
                 />
                 <div className="edit_footer">
                   <div className="edit_footer_left">
-                    {canEditNoteLikeOwner && (
-                      <button
-                        type="button"
-                        className="btn btn_ghost"
-                        onClick={handleCancelEdit}
-                      >
-                        Cancel edit
-                      </button>
-                    )}
-
-                    {canEditNoteLikeOwner && (
-                      <button
-                        type="button"
-                        className="btn btn_danger"
-                        onClick={() => void deleteNote(note.id)}
-                      >
-                        Delete
-                      </button>
-                    )}
+                    <Button
+                      type="button"
+                      variant="danger"
+                      onClick={() => void deleteNote(note.id)}
+                    >
+                      Delete
+                    </Button>
                   </div>
 
                   <div className="edit_footer_right">
-                    <input
-                      disabled={!draftTitle}
+                    <Button
                       type="submit"
-                      value="Save"
-                      className="btn btn_primary"
-                    />
+                      variant="primary"
+                      disabled={!draftTitle || !isDraftDirty || isSaving}
+                    >
+                      Save
+                    </Button>
                   </div>
                 </div>
               </form>
             ) : (
               <ReactMarkdown>{note?.content ?? ''}</ReactMarkdown>
-            )}
-
-            {!isEditUI && (
-              <div className="actions_bar">
-                <div className="actions_bar_left">
-                  {canEditNoteLikeOwner && (
-                    <button
-                      type="button"
-                      className="btn btn_secondary"
-                      onClick={() => {
-                        setIsEdit(true);
-                        setIsTitleInputOpen(false);
-                      }}
-                    >
-                      Edit
-                    </button>
-                  )}
-                </div>
-
-                <div className="actions_bar_right">
-                  {canEditNoteLikeOwner && (
-                    <button
-                      type="button"
-                      className="btn btn_danger"
-                      onClick={() => void deleteNote(note.id)}
-                    >
-                      Delete
-                    </button>
-                  )}
-                </div>
-              </div>
             )}
           </div>
         )}
