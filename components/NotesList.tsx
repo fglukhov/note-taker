@@ -1384,7 +1384,11 @@ const NotesList: React.FC<Props> = (props) => {
                     onAdd={handleEdit}
                     onDelete={handleDelete}
                     isNew={note.isNew}
-                    onToggleCollapse={handleToggleCollapse}
+                    onToggleCollapse={(curId, position) => {
+                      handleToggleCollapse(curId);
+                      setCursorPosition(position);
+                      focusId.current = curId;
+                    }}
                     onComplete={handleLeafCompleteChange}
                   />
                 );
