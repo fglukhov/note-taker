@@ -1,1 +1,23 @@
 @import 'tailwindcss';
+
+@theme {
+  --color-page: #f3f3f3;
+  --color-surface: #ffffff;
+  --color-subtle: #ebebeb;
+  --color-focus: #d1eaff;
+  --color-primary: #0070f3;
+  --color-danger: #e11d48;
+  --color-muted: #989898;
+  --color-border: #c5c5c5;
+  --color-border-ui: rgba(0, 0, 0, 0.12);
+  --color-border-input: rgba(0, 0, 0, 0.2);
+  --color-accent: #0070f3;
+  --color-danger: #e11d48;
+}
+
+@layer base {
+  body {
+    font-size: 16px;
+    background-color: var(--color-page);
+  }
+}

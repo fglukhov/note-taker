@@ -4,7 +4,6 @@ export default function Document() {
   return (
     <Html lang="en">
       <Head>
-        <title>RootNote — Tree notes &amp; tasks, keyboard-first</title>
         <meta
           name="description"
           content="Keyboard-first outliner for notes and tasks. Tree structure, Markdown in titles, full editor for note bodies, priorities. GitHub login. Alpha."

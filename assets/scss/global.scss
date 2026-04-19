@@ -2,7 +2,6 @@ $basic-color: #000;
 
 :root {
   /* Backgrounds */
-  --bg-page: #f3f3f3;
   --bg-surface: #ffffff;
   --bg-subtle: #ebebeb;
   --bg-focus: #d1eaff;
@@ -30,10 +29,6 @@ $basic-color: #000;
   --shadow-hover: 1px 1px 3px #aaa;
   --shadow-modal: 0 12px 36px rgba(0, 0, 0, 0.18);
   --ring-focus: #dcdcdc;
-}
-
-body {
-  background: var(--bg-page);
 }
 
 .container {
