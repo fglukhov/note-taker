@@ -1,3 +1,4 @@
+import Head from 'next/head';
 import { SessionProvider } from 'next-auth/react';
 import { AppProps } from 'next/app';
 import { Analytics } from '@vercel/analytics/next';
@@ -9,10 +10,15 @@ import '@milkdown/crepe/theme/frame.css';
 
 const App = ({ Component, pageProps }: AppProps) => {
   return (
-    <SessionProvider session={pageProps.session}>
-      <Component {...pageProps} />
-      <Analytics />
-    </SessionProvider>
+    <>
+      <Head>
+        <title>RootNote – Tree notes & tasks, keyboard-first</title>
+      </Head>
+      <SessionProvider session={pageProps.session}>
+        <Component {...pageProps} />
+        <Analytics />
+      </SessionProvider>
+    </>
   );
 };
 
