@@ -9,7 +9,7 @@ const Layout: React.FC<Props> = (props) => (
   <>
     <Header />
     <main>
-      <div className="container">{props.children}</div>
+      <div className="app-container">{props.children}</div>
     </main>
   </>
 );

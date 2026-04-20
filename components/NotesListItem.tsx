@@ -5,6 +5,7 @@ import React, {
   useEffect,
   useLayoutEffect,
 } from 'react';
+import { useDrag } from '@use-gesture/react';
 import { useKeyPress } from '@/lib/useKeyPress';
 import {
   applyInlineMarkdown,
@@ -66,15 +67,23 @@ export type NotesListItemProps = {
     collapsed?: boolean,
   ) => void;
   onToggleCollapse?: (noteId: string, position: number) => void;
+  pendingDeleteId?: string | null;
+  onRestore?: (noteId: string) => void;
 };
 
 const NotesListItem: React.FC<NotesListItemProps> = (props) => {
+  const SWIPE_THRESHOLD = 80;
+  const MAX_SWIPE_OFFSET = 120;
   const id = props.id;
   const parentId = props.parentId;
   const [title, setTitle] = useState(props.title);
   const sort = props.sort;
   const [prevTitle, setPrevTitle] = useState(props.title);
   const [isNew, setIsNew] = useState(props.isNew);
+  const [swipeOffset, setSwipeOffset] = useState(0);
+  const [isSwiping, setIsSwiping] = useState(false);
+  const swipeOffsetRef = useRef(0);
+  const isSwipeGestureActiveRef = useRef(false);
   const isEditing = props.isEdit && props.isFocus;
   const { callbackRef: titleTextareaCallbackRef } =
     useAutoResizeTextarea(title);
@@ -164,7 +173,63 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
     }
   };
 
+  const resetSwipeState = () => {
+    isSwipeGestureActiveRef.current = false;
+    swipeOffsetRef.current = 0;
+    setIsSwiping(false);
+    setSwipeOffset(0);
+  };
+
   useKeyPress(props.isFocus ? ['Escape', 'Delete'] : [], onKeyPress);
+
+  const bindSwipe = useDrag(
+    ({ down, first, movement: [mx], event }) => {
+      if (typeof window === 'undefined') return;
+      if (window.innerWidth >= 768) return;
+      if (isEditing) return;
+      const isTouchGesture =
+        ('pointerType' in event && event.pointerType === 'touch') ||
+        event.type.startsWith('touch');
+
+      if (first && !isTouchGesture) return;
+      if (!isSwipeGestureActiveRef.current && !isTouchGesture) return;
+
+      const nextOffset = Math.max(
+        -MAX_SWIPE_OFFSET,
+        Math.min(MAX_SWIPE_OFFSET, mx),
+      );
+
+      if (down) {
+        isSwipeGestureActiveRef.current = true;
+        setIsSwiping(true);
+        swipeOffsetRef.current = nextOffset;
+        setSwipeOffset(nextOffset);
+        return;
+      }
+
+      if (!isSwipeGestureActiveRef.current) return;
+      setIsSwiping(false);
+      const finalOffset =
+        Math.abs(nextOffset) > 0 ? nextOffset : swipeOffsetRef.current;
+      if (Math.abs(finalOffset) >= SWIPE_THRESHOLD) {
+        if (finalOffset > 0) {
+          props.onComplete?.(id, !Boolean(props.complete));
+        } else if (finalOffset < 0) {
+          props.onDelete?.(id, parentId, sort);
+        }
+      }
+
+      resetSwipeState();
+    },
+    {
+      axis: 'x',
+      filterTaps: true,
+    },
+  );
+  const swipeProgress = Math.min(Math.abs(swipeOffset) / SWIPE_THRESHOLD, 1);
+  const showLeftAction = swipeOffset > 0;
+  const showRightAction = swipeOffset < 0;
+  const completeActionLabel = props.complete ? 'Reopen' : 'Complete';
 
   if (props.isFocus) {
     props.onFocus(props.id);
@@ -191,6 +256,31 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
     props.collapsed,
   );
 
+  if (props.pendingDeleteId === id) {
+    return (
+      <div
+        className={
+          styles.notes_list_item +
+          (props.parentId != 'root' ? ' ml-4 md:ml-8' : '') +
+          ' ' +
+          styles.pending_delete
+        }
+        id={props.id}
+      >
+        <button
+          type="button"
+          className={styles.restore_button}
+          onClick={(e) => {
+            e.stopPropagation();
+            props.onRestore?.(id);
+          }}
+        >
+          Restore
+        </button>
+      </div>
+    );
+  }
+
   //console.log(props)
 
   return (
@@ -198,6 +288,7 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
       className={
         styles.notes_list_item +
         (props.isFocus ? ' ' + styles.focus : '') +
+        (props.parentId != 'root' ? ' ml-4 md:ml-8' : '') +
         (props.complete ? ' ' + styles.complete : '') +
         (props.collapsed ? ' ' + styles.collapsed : '')
       }
@@ -205,189 +296,217 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
     >
       {/*<div>"collapsed: " + {props.collapsed && "true"}</div>*/}
       {/*<div>"children: " + {props.familyCount > 1 && "true"}</div>*/}
-      <div
-        className={styles.notes_list_item_title_wrapper}
-        ref={titleWrapperRef}
-        onClick={
-          !isEditing
-            ? (e) => {
-                e.stopPropagation();
-                props.onSelect?.(id, parentPosition);
-              }
-            : undefined
-        }
-        onDoubleClick={
-          !isEditing
-            ? (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                props.onSelect?.(id, parentPosition, true);
-              }
-            : undefined
-        }
-      >
-        {/*<div>Is in viewport: {isOnScreen ? 'true' : 'false'}</div>*/}
-        {!isEditing ? (
-          <>
-            <div className={styles.notes_list_item_title}>
-              {isLeaf && (
-                <label
-                  className={styles.notes_list_item_complete_checkbox}
-                  onClick={(e) => e.stopPropagation()}
-                  onDoubleClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                  }}
-                >
-                  <input
-                    type="checkbox"
-                    checked={Boolean(props.complete)}
-                    onChange={(e) => {
+      <div className="relative">
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-between md:hidden">
+          <span
+            className="inline-flex h-8 items-center rounded-md bg-(--accent) px-3 text-xs font-semibold uppercase tracking-wide leading-none text-white transition-opacity"
+            style={{ opacity: showLeftAction ? swipeProgress : 0 }}
+          >
+            {completeActionLabel}
+          </span>
+          <span
+            className="inline-flex h-8 items-center rounded-md bg-(--danger) px-3 text-xs font-semibold uppercase tracking-wide leading-none text-white transition-opacity"
+            style={{ opacity: showRightAction ? swipeProgress : 0 }}
+          >
+            Delete
+          </span>
+        </div>
+        <div
+          className={styles.notes_list_item_title_wrapper}
+          ref={titleWrapperRef}
+          {...bindSwipe()}
+          style={{
+            touchAction: 'pan-y',
+            transform: `translateX(${swipeOffset}px)`,
+            transition: isSwiping
+              ? 'none'
+              : 'transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1)',
+          }}
+          onTouchEnd={resetSwipeState}
+          onTouchCancel={resetSwipeState}
+          onPointerCancel={resetSwipeState}
+          onClick={
+            !isEditing
+              ? (e) => {
+                  e.stopPropagation();
+                  props.onSelect?.(id, parentPosition);
+                }
+              : undefined
+          }
+          onDoubleClick={
+            !isEditing
+              ? (e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  props.onSelect?.(id, parentPosition, true);
+                }
+              : undefined
+          }
+        >
+          {/*<div>Is in viewport: {isOnScreen ? 'true' : 'false'}</div>*/}
+          {!isEditing ? (
+            <>
+              <div className={styles.notes_list_item_title}>
+                {isLeaf && (
+                  <label
+                    className={styles.notes_list_item_complete_checkbox}
+                    onClick={(e) => e.stopPropagation()}
+                    onDoubleClick={(e) => {
+                      e.preventDefault();
                       e.stopPropagation();
-                      props.onComplete?.(id, e.target.checked);
                     }}
-                    aria-label="Mark note complete"
-                  />
-                </label>
-              )}
-              {
-                // <span
-                //   style={{
-                //     color: 'red',
-                //     fontSize: '12px',
-                //     paddingBottom: '3px',
-                //     paddingRight: '5px',
-                //   }}
-                // >
-                //   {props.sort}
-                // </span>
-              }
-              {/*<span style={{color: "red", fontSize: "12px",}}>{props.position + ": "}</span>*/}
-              {props.familyCount > 1 && (
-                <div
-                  className={styles.notes_list_item_arrow}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    props.onToggleCollapse?.(id, props.position);
-                  }}
-                  onDoubleClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                  }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={Boolean(props.complete)}
+                      onChange={(e) => {
+                        e.stopPropagation();
+                        props.onComplete?.(id, e.target.checked);
+                      }}
+                      aria-label="Mark note complete"
+                    />
+                  </label>
+                )}
+                {
+                  // <span
+                  //   style={{
+                  //     color: 'red',
+                  //     fontSize: '12px',
+                  //     paddingBottom: '3px',
+                  //     paddingRight: '5px',
+                  //   }}
+                  // >
+                  //   {props.sort}
+                  // </span>
+                }
+                {/*<span style={{color: "red", fontSize: "12px",}}>{props.position + ": "}</span>*/}
+                {props.familyCount > 1 && (
+                  <div
+                    className={styles.notes_list_item_arrow}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      props.onToggleCollapse?.(id, props.position);
+                    }}
+                    onDoubleClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }}
+                  >
+                    <ChevronDown size={24} />
+                  </div>
+                )}
+                <span
+                  className={[
+                    priorityClass,
+                    /^#{1}\s/.test(props.title ?? '') ? styles.title_h1 : '',
+                    /^#{2}\s/.test(props.title ?? '') ? styles.title_h2 : '',
+                    /^#{3}\s/.test(props.title ?? '') ? styles.title_h3 : '',
+                  ]
+                    .filter(Boolean)
+                    .join(' ')}
                 >
-                  <ChevronDown size={24} />
-                </div>
-              )}
-              <span
-                className={[
-                  priorityClass,
-                  /^#{1}\s/.test(props.title ?? '') ? styles.title_h1 : '',
-                  /^#{2}\s/.test(props.title ?? '') ? styles.title_h2 : '',
-                  /^#{3}\s/.test(props.title ?? '') ? styles.title_h3 : '',
-                ]
-                  .filter(Boolean)
-                  .join(' ')}
-              >
-                <ReactMarkdown
-                  components={{
-                    p: ({ children }) => <>{children}</>,
-                    h1: ({ children }) => <>{children}</>,
-                    h2: ({ children }) => <>{children}</>,
-                    h3: ({ children }) => <>{children}</>,
-                    a: ({ href, children }) => (
-                      <a
-                        href={href}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={(e) => e.stopPropagation()}
-                        onDoubleClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                        }}
-                      >
-                        {children}
-                      </a>
-                    ),
+                  <ReactMarkdown
+                    components={{
+                      p: ({ children }) => <>{children}</>,
+                      h1: ({ children }) => <>{children}</>,
+                      h2: ({ children }) => <>{children}</>,
+                      h3: ({ children }) => <>{children}</>,
+                      a: ({ href, children }) => (
+                        <a
+                          href={href}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          onDoubleClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                          }}
+                        >
+                          {children}
+                        </a>
+                      ),
+                    }}
+                    allowedElements={[
+                      'p',
+                      'h1',
+                      'h2',
+                      'h3',
+                      'strong',
+                      'em',
+                      'code',
+                      'del',
+                      's',
+                      'a',
+                    ]}
+                    unwrapDisallowed
+                  >
+                    {props.title}
+                  </ReactMarkdown>
+                </span>
+                {props.hasContent && (
+                  <div
+                    className={styles.notes_list_item_content_icon}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      props.onSelect?.(id, parentPosition);
+                      Router.push(
+                        { pathname: '/', query: { note: id } },
+                        undefined,
+                        { shallow: true },
+                      );
+                    }}
+                    onDoubleClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }}
+                  >
+                    <FileText size={16} />
+                  </div>
+                )}
+              </div>
+            </>
+          ) : (
+            <>
+              <div className={styles.notes_list_item_form}>
+                <textarea
+                  rows={1}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="Title"
+                  value={title}
+                  onBlur={() => commitTitle()}
+                  onPaste={(e) => {
+                    if (handleTitleMarkdownPaste(e, setTitle))
+                      e.preventDefault();
                   }}
-                  allowedElements={[
-                    'p',
-                    'h1',
-                    'h2',
-                    'h3',
-                    'strong',
-                    'em',
-                    'code',
-                    'del',
-                    's',
-                    'a',
-                  ]}
-                  unwrapDisallowed
-                >
-                  {props.title}
-                </ReactMarkdown>
-              </span>
-              {props.hasContent && (
-                <div
-                  className={styles.notes_list_item_content_icon}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    props.onSelect?.(id, parentPosition);
-                    Router.push(
-                      { pathname: '/', query: { note: id } },
-                      undefined,
-                      { shallow: true },
-                    );
+                  onKeyDown={(e) => {
+                    const isMod = e.metaKey || e.ctrlKey;
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      commitTitle();
+                    } else if (isMod && e.key === 'b') {
+                      e.preventDefault();
+                      applyInlineMarkdown(e.currentTarget, '**', setTitle);
+                    } else if (isMod && e.key === 'i') {
+                      e.preventDefault();
+                      applyInlineMarkdown(e.currentTarget, '*', setTitle);
+                    } else if (e.key === 'Escape') {
+                      e.preventDefault();
+                      hasCommittedRef.current = true;
+                      if (!isNew) setTitle(prevTitle);
+                      props.onCancel(isNew, id, parentId, sort);
+                    }
                   }}
-                  onDoubleClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
+                  ref={(el) => {
+                    titleTextareaCallbackRef(el);
+                    if (el && props.isFocus) {
+                      el.focus({ preventScroll: true });
+                    }
                   }}
-                >
-                  <FileText size={16} />
-                </div>
-              )}
-            </div>
-          </>
-        ) : (
-          <>
-            <div className={styles.notes_list_item_form}>
-              <textarea
-                rows={1}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="Title"
-                value={title}
-                onBlur={() => commitTitle()}
-                onPaste={(e) => {
-                  if (handleTitleMarkdownPaste(e, setTitle)) e.preventDefault();
-                }}
-                onKeyDown={(e) => {
-                  const isMod = e.metaKey || e.ctrlKey;
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    commitTitle();
-                  } else if (isMod && e.key === 'b') {
-                    e.preventDefault();
-                    applyInlineMarkdown(e.currentTarget, '**', setTitle);
-                  } else if (isMod && e.key === 'i') {
-                    e.preventDefault();
-                    applyInlineMarkdown(e.currentTarget, '*', setTitle);
-                  } else if (e.key === 'Escape') {
-                    e.preventDefault();
-                    hasCommittedRef.current = true;
-                    if (!isNew) setTitle(prevTitle);
-                    props.onCancel(isNew, id, parentId, sort);
-                  }
-                }}
-                ref={(el) => {
-                  titleTextareaCallbackRef(el);
-                  if (el && props.isFocus) {
-                    el.focus({ preventScroll: true });
-                  }
-                }}
-              />
-            </div>
-          </>
-        )}
+                />
+              </div>
+            </>
+          )}
+        </div>
       </div>
 
       {childNotes.map((childNote, i) => {
@@ -427,6 +546,8 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
             onToggleCollapse={props.onToggleCollapse}
             onSelect={props.onSelect}
             onComplete={props.onComplete}
+            pendingDeleteId={props.pendingDeleteId}
+            onRestore={props.onRestore}
           />
         );
       })}

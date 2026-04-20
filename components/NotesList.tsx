@@ -150,6 +150,7 @@ const NotesList: React.FC<Props> = (props) => {
 
   const [cursorPosition, setCursorPosition] = useState(0);
   const [notesFeed, setNotesFeed] = useState(props.feed);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
 
   const router = useRouter();
   const isNoteModalOpen = router.isReady && Boolean(router.query.note);
@@ -241,60 +242,80 @@ const NotesList: React.FC<Props> = (props) => {
     }, 1000);
   };
 
-  const handleDelete = () => {
+  const removeNoteFamilyFromFeed = (
+    noteId: string,
+    baseFeed: NotesListItemProps[],
+  ): NotesListItemProps[] => {
+    const curNote = baseFeed.find((n) => n.id === noteId);
+    if (!curNote) return baseFeed;
+
+    const removedFeed = removeFamily(curNote.id, baseFeed);
+    const remainingIds = new Set(removedFeed.map((n) => n.id));
+    const removedIds = baseFeed
+      .map((n) => n.id)
+      .filter((id) => !remainingIds.has(id));
+
+    for (const rid of removedIds) {
+      if (!updatedIds.current.includes(rid)) updatedIds.current.push(rid);
+    }
+
+    let newFeed = baseFeed.filter((n) => !removedIds.includes(n.id));
+    newFeed = renormalizeSortsForParent(newFeed, curNote.parentId);
+    markSiblingsForSync(newFeed, curNote.parentId, updatedIds.current);
+
+    return newFeed;
+  };
+
+  const finalizePendingDelete = (): boolean => {
+    if (!pendingDeleteId) return false;
+
+    const newFeed = removeNoteFamilyFromFeed(pendingDeleteId, notesFeed);
+    scheduleSyncUpdate();
+    syncFeed.current = newFeed;
+    setNotesFeed(newFeed);
+    setPendingDeleteId(null);
+    setCursorPosition((cp) =>
+      newFeed.length === 0 ? 0 : Math.min(cp, newFeed.length - 1),
+    );
+    return true;
+  };
+
+  const clearPendingDelete = () => {
+    setPendingDeleteId(null);
+  };
+
+  const handleRestore = (noteId: string) => {
+    if (pendingDeleteId !== noteId) return;
+    clearPendingDelete();
+  };
+
+  const handleDelete = (noteId?: string) => {
     setIsEditTitle(false);
 
     if (updateTimeout) {
       clearTimeout(updateTimeout);
     }
 
-    let curNote = notesFeed.find((n) => n.id == focusId.current);
+    const targetId = noteId ?? focusId.current ?? undefined;
+    if (!targetId) return;
 
-    // @ts-ignore
-    let removedFeed = removeFamily(curNote.id, notesFeed);
-
-    let remainingIds = removedFeed.map((n) => n.id);
-
-    let allIds = notesFeed.map((n) => n.id);
-
-    let removedIds = [];
-
-    allIds.map((id) => {
-      if (!remainingIds.includes(id)) {
-        removedIds.push(id);
-      }
-    });
-
-    removedIds.map((id) => {
-      if (!updatedIds.current.includes(id)) updatedIds.current.push(id);
-    });
-
-    //const deletedCount = notesFeed.length - newFeed.length;
-
-    let newFeed = notesFeed.filter((n) => {
-      return !removedIds.includes(n.id);
-    });
-
-    newFeed = renormalizeSortsForParent(newFeed, curNote.parentId);
-    markSiblingsForSync(newFeed, curNote.parentId, updatedIds.current);
-
-    //console.log(newFeed)
-
-    scheduleSyncUpdate();
-
-    syncFeed.current = newFeed;
-
-    setNotesFeed(newFeed);
-
-    //console.log(cursorPosition +" : "+ newFeed.length)
-    if (cursorPosition > newFeed.length - 1) {
-      setCursorPosition(newFeed.length - 1);
+    if (pendingDeleteId === targetId) {
+      finalizePendingDelete();
+      return;
     }
+
+    if (pendingDeleteId && pendingDeleteId !== targetId) {
+      finalizePendingDelete();
+    }
+
+    setPendingDeleteId(targetId);
   };
 
   const insertNote = (
     event: KeyboardEvent | { shiftKey: boolean; altKey: boolean } | null,
   ): void => {
+    finalizePendingDelete();
+
     if (event == null) {
       event = {
         shiftKey: false,
@@ -570,6 +591,7 @@ const NotesList: React.FC<Props> = (props) => {
   };
 
   const handleToggleCollapse = (noteId: string) => {
+    finalizePendingDelete();
     const curNote = notesFeed.find((n) => n.id == noteId);
     if (!curNote) return;
     setCollapsedState(noteId, !curNote.collapsed);
@@ -941,16 +963,19 @@ const NotesList: React.FC<Props> = (props) => {
     setNotesFeed(newFeed);
   };
 
-  const handleLeafCompleteChange = (noteId: string, isComplete: boolean) => {
+  const handleCompleteChange = (noteId: string, isComplete: boolean) => {
+    finalizePendingDelete();
     const curNote = notesFeed.find((n) => n.id === noteId);
     if (!curNote) return;
-    if (getFamily(noteId, notesFeed).length !== 1) return;
 
     clearPendingUpdateTimeout();
+    const familyIds = new Set(getFamily(noteId, notesFeed).map((n) => n.id));
 
     const newFeed = notesFeed.map((n) => {
-      if (n.id !== noteId) return n;
-      if (!updatedIds.current.includes(n.id)) updatedIds.current.push(n.id);
+      if (!familyIds.has(n.id)) return n;
+      if (!updatedIds.current.includes(n.id)) {
+        updatedIds.current.push(n.id);
+      }
       return { ...n, complete: isComplete };
     });
 
@@ -1140,6 +1165,10 @@ const NotesList: React.FC<Props> = (props) => {
       return;
     }
 
+    if (pendingDeleteId && event.code !== 'Delete') {
+      finalizePendingDelete();
+    }
+
     eventKeyRef.current = event.code;
 
     clearTimeout(timeout);
@@ -1245,6 +1274,7 @@ const NotesList: React.FC<Props> = (props) => {
   };
 
   const handleEdit = (noteId: string, title: string): void => {
+    finalizePendingDelete();
     if (updateTimeout) {
       clearTimeout(updateTimeout);
     }
@@ -1334,6 +1364,7 @@ const NotesList: React.FC<Props> = (props) => {
     parentId: string | undefined,
     sort: number | undefined,
   ): void => {
+    finalizePendingDelete();
     setIsEditTitle(false);
     clearTimeout(timeout);
     lastKeyRef.current = null;
@@ -1366,8 +1397,8 @@ const NotesList: React.FC<Props> = (props) => {
   };
 
   return (
-    <div className="row">
-      <div className={`col ${styles.notes_list_col_1}`}>
+    <div className="flex flex-wrap gap-[30px]">
+      <div className="grow basis-0">
         {/*<div>{isUpdating ? "true" : "false"}</div>*/}
 
         {!notesFeed.length && (
@@ -1415,6 +1446,9 @@ const NotesList: React.FC<Props> = (props) => {
                       focusId.current = curId;
                     }}
                     onSelect={(curId, position, startEditTitle) => {
+                      if (pendingDeleteId && pendingDeleteId !== curId) {
+                        finalizePendingDelete();
+                      }
                       // Clicking moves focus; double-click enters edit mode.
                       setIsEditTitle(Boolean(startEditTitle));
                       setCursorPosition(position);
@@ -1422,14 +1456,19 @@ const NotesList: React.FC<Props> = (props) => {
                     }}
                     onEdit={handleEdit}
                     onAdd={handleEdit}
-                    onDelete={handleDelete}
+                    onDelete={(curId) => handleDelete(curId)}
                     isNew={note.isNew}
                     onToggleCollapse={(curId, position) => {
+                      if (pendingDeleteId && pendingDeleteId !== curId) {
+                        finalizePendingDelete();
+                      }
                       handleToggleCollapse(curId);
                       setCursorPosition(position);
                       focusId.current = curId;
                     }}
-                    onComplete={handleLeafCompleteChange}
+                    onComplete={handleCompleteChange}
+                    pendingDeleteId={pendingDeleteId}
+                    onRestore={handleRestore}
                   />
                 );
               });
@@ -1437,7 +1476,7 @@ const NotesList: React.FC<Props> = (props) => {
           </NotesProvider>
         </div>
       </div>
-      <div className={`col ${styles.notes_list_col_2}`}>
+      <div className="flex-[0_0_340px] max-w-[340px] hidden md:block">
         <NotesHotkeysHints />
       </div>
     </div>

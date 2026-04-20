@@ -4,6 +4,8 @@
   "description": "",
   "scripts": {
     "dev": "NODE_EXTRA_CA_CERTS=certs/prod-ca-2021.crt next",
+    "dev:https": "NODE_EXTRA_CA_CERTS=certs/prod-ca-2021.crt next dev --experimental-https -H 0.0.0.0",
+    "tunnel": "npx --yes cloudflared tunnel --url http://127.0.0.1:3000",
     "build": "next build",
     "start": "NODE_EXTRA_CA_CERTS=certs/prod-ca-2021.crt next start",
     "test": "vitest run",
@@ -37,6 +39,7 @@
     "@tailwindcss/postcss": "^4.2.2",
     "@uiw/codemirror-theme-github": "^4.25.9",
     "@uiw/react-md-editor": "^4.0.11",
+    "@use-gesture/react": "^10.3.1",
     "@vercel/analytics": "^2.0.1",
     "eslint-config-next": "^16.1.1",
     "feather-icons": "^4.29.1",

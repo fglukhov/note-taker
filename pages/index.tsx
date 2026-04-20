@@ -901,21 +901,19 @@ const Main: React.FC<Props> = (props) => {
   return (
     <Layout>
       <div className="page">
-        <main>
-          <div>
-            {/*
+        <div>
+          {/*
             <h1>{props.session ? 'Notes' : 'Demo'}</h1>
             */}
 
-            <NotesList
-              feed={props.session ? props.feed : demoFeed}
-              feedModalSync={feedModalSync}
-              onFeedChange={(feed) => {
-                localFeedRef.current = feed;
-              }}
-            />
-          </div>
-        </main>
+          <NotesList
+            feed={props.session ? props.feed : demoFeed}
+            feedModalSync={feedModalSync}
+            onFeedChange={(feed) => {
+              localFeedRef.current = feed;
+            }}
+          />
+        </div>
       </div>
 
       <Modal
