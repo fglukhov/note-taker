@@ -18,6 +18,13 @@
 @layer base {
   body {
     font-size: 16px;
+    line-height: 1.4;
     background-color: var(--color-page);
+  }
+}
+
+@layer components {
+  .app-container {
+    @apply max-w-6xl mx-auto px-4 md:px-8 box-border;
   }
 }

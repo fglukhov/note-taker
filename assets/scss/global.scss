@@ -31,22 +31,9 @@ $basic-color: #000;
   --ring-focus: #dcdcdc;
 }
 
-.container {
-  width: 100%;
-  max-width: 72rem;
-  margin-inline: auto;
-  padding-inline: 2rem;
-  box-sizing: border-box;
-}
-
-.row {
-  display: flex;
-  gap: 30px;
-}
-
-.col {
-  flex-basis: 0;
-  flex-grow: 1;
+html,
+body {
+  overflow-x: hidden;
 }
 
 .page {

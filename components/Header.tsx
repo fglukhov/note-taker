@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { signOut, useSession } from 'next-auth/react';
 import styles from './Header.module.scss';
+import Image from 'next/image';
 
 const Header: React.FC = () => {
   const router = useRouter();
@@ -20,7 +21,7 @@ const Header: React.FC = () => {
         data-active={isActive('/') ? 'true' : 'false'}
         aria-label="RootNote"
       >
-        <img
+        <Image
           className={styles.logoImg}
           src="/logo.svg"
           alt=""
@@ -75,7 +76,7 @@ const Header: React.FC = () => {
 
   return (
     <header className={styles.header}>
-      <div className="container">
+      <div className="app-container">
         <nav className={styles.nav} aria-label="Main">
           {left}
           {right}

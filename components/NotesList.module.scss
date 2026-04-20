@@ -1,14 +1,5 @@
 @import '../assets/scss/vars';
 
-.notes_list_col_1 {
-  flex-grow: 1;
-}
-
-.notes_list_col_2 {
-  flex: 0 0 340px;
-  max-width: 340px;
-}
-
 .sidebar_hints {
   background: var(--bg-subtle);
   padding: 20px;
