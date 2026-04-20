@@ -72,7 +72,6 @@
     "prisma": "^7.3.0",
     "react-modal": "^3.16.1",
     "superjson": "^1.12.2",
-    "tailwind": "^3.1.0",
     "typescript": "^5.9.3",
     "vitest": "^2.1.9"
   }
