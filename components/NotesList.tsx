@@ -347,6 +347,9 @@ const NotesList: React.FC<Props> = (props) => {
 
     if (!notesFeed.length) {
       parentId = 'root';
+    } else if (!curNote) {
+      parentId = 'root';
+      newSort = siblingsSortedByParent(notesFeed, 'root').length;
     } else {
       if (event.shiftKey === true) {
         insertChild = true;
@@ -367,6 +370,8 @@ const NotesList: React.FC<Props> = (props) => {
 
     if (!notesFeed.length) {
       insertAt = 0;
+    } else if (!curNote) {
+      insertAt = notesFeed.length;
     } else {
       if (insertChild) {
         // A nested item is always inserted at the next position after current.
@@ -423,8 +428,21 @@ const NotesList: React.FC<Props> = (props) => {
     setTimeout(function () {
       setCursorPosition(insertAt);
       setIsEditTitle(true);
+      focusId.current = newId;
       setNotesFeed(newFeed);
     }, 1);
+  };
+
+  const handleMobileAddBelow = () => {
+    insertNote({ shiftKey: false, altKey: false });
+  };
+
+  const handleMobileAddAbove = () => {
+    if (!focusId.current) {
+      insertNote({ shiftKey: false, altKey: false });
+      return;
+    }
+    insertNote({ shiftKey: false, altKey: true });
   };
 
   useEffect(() => {
@@ -1474,6 +1492,22 @@ const NotesList: React.FC<Props> = (props) => {
               });
             })()}
           </NotesProvider>
+        </div>
+        <div className={styles.mobile_toolbar + ' md:hidden'}>
+          <button
+            type="button"
+            className="btn btn_primary"
+            onClick={handleMobileAddBelow}
+          >
+            Add below
+          </button>
+          <button
+            type="button"
+            className="btn btn_primary"
+            onClick={handleMobileAddAbove}
+          >
+            Add above
+          </button>
         </div>
       </div>
       <div className="flex-[0_0_340px] max-w-[340px] hidden md:block">

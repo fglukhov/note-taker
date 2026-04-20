@@ -1,5 +1,26 @@
 @import '../assets/scss/vars';
 
+.notes_list {
+  overflow-x: hidden;
+}
+
+.mobile_toolbar {
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  bottom: 12px;
+  z-index: 40;
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+@media (max-width: 767px) {
+  .notes_list {
+    padding-bottom: 84px;
+  }
+}
+
 .sidebar_hints {
   background: var(--bg-subtle);
   padding: 20px;
