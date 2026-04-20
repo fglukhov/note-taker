@@ -296,7 +296,7 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
     >
       {/*<div>"collapsed: " + {props.collapsed && "true"}</div>*/}
       {/*<div>"children: " + {props.familyCount > 1 && "true"}</div>*/}
-      <div className="relative">
+      <div className={`${styles.notes_list_item_row} relative`}>
         <div className="pointer-events-none absolute inset-0 flex items-center justify-between md:hidden">
           <span
             className="inline-flex h-8 items-center rounded-md bg-(--accent) px-3 text-xs font-semibold uppercase tracking-wide leading-none text-white transition-opacity"
