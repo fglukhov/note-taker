@@ -12,6 +12,7 @@ import { NotesListItemProps } from '@/components/NotesListItem';
 import { useKeyPress } from '@/lib/useKeyPress';
 import { getFamily, removeFamily, getNoteDepth } from '@/lib/notesTree';
 import NotesHotkeysHints from '@/components/NotesHotkeysHints';
+import { Button } from '@/components/Button';
 import styles from '@/components/NotesList.module.scss';
 import Router, { useRouter } from 'next/router';
 
@@ -347,6 +348,9 @@ const NotesList: React.FC<Props> = (props) => {
 
     if (!notesFeed.length) {
       parentId = 'root';
+    } else if (!curNote) {
+      parentId = 'root';
+      newSort = siblingsSortedByParent(notesFeed, 'root').length;
     } else {
       if (event.shiftKey === true) {
         insertChild = true;
@@ -367,6 +371,8 @@ const NotesList: React.FC<Props> = (props) => {
 
     if (!notesFeed.length) {
       insertAt = 0;
+    } else if (!curNote) {
+      insertAt = notesFeed.length;
     } else {
       if (insertChild) {
         // A nested item is always inserted at the next position after current.
@@ -423,8 +429,21 @@ const NotesList: React.FC<Props> = (props) => {
     setTimeout(function () {
       setCursorPosition(insertAt);
       setIsEditTitle(true);
+      focusId.current = newId;
       setNotesFeed(newFeed);
     }, 1);
+  };
+
+  const handleMobileAddBelow = () => {
+    insertNote({ shiftKey: false, altKey: false });
+  };
+
+  const handleMobileAddAbove = () => {
+    if (!focusId.current) {
+      insertNote({ shiftKey: false, altKey: false });
+      return;
+    }
+    insertNote({ shiftKey: false, altKey: true });
   };
 
   useEffect(() => {
@@ -1280,6 +1299,139 @@ const NotesList: React.FC<Props> = (props) => {
     }
 
     let curNote = notesFeed.find((n) => n.id == noteId);
+    if (!curNote) return;
+
+    const titleBlocks = title
+      .replace(/\r\n/g, '\n')
+      .split(/\n\s*\n+/)
+      .map((part) => part.replace(/\n+/g, ' ').trimEnd())
+      .filter((part) => part.trim().length > 0)
+      .map((part) => {
+        const indentMatch = part.match(/^[ \t]*/)?.[0] ?? '';
+        const level = indentMatch.replace(/\t/g, '  ').length;
+        return {
+          level,
+          text: part.slice(indentMatch.length).trim(),
+        };
+      })
+      .filter((part) => part.text.length > 0);
+
+    if (titleBlocks.length > 1) {
+      const firstTitle = titleBlocks[0].text;
+      const additionalBlocks = titleBlocks.slice(1);
+      const levelAnchors = new Map<number, string>([[0, curNote.id]]);
+      const siblingsToInsertAtRoot = additionalBlocks.filter(
+        (b) => b.level === 0,
+      ).length;
+      const childCounts = new Map<string, number>();
+
+      for (const n of notesFeed) {
+        const key = parentKey(n.parentId);
+        childCounts.set(key, (childCounts.get(key) ?? 0) + 1);
+      }
+
+      let rootInsertOffset = 0;
+      const newNotes: NotesListItemProps[] = additionalBlocks.map((block) => {
+        let resolvedLevel = block.level;
+        while (resolvedLevel > 0 && !levelAnchors.has(resolvedLevel - 1)) {
+          resolvedLevel -= 1;
+        }
+
+        let parentForNewNote: string | undefined;
+        let sortForNewNote = 0;
+
+        if (resolvedLevel === 0) {
+          parentForNewNote = curNote.parentId;
+          sortForNewNote = (curNote.sort ?? 0) + 1 + rootInsertOffset;
+          rootInsertOffset += 1;
+        } else {
+          parentForNewNote = levelAnchors.get(resolvedLevel - 1);
+          const parentKeyValue = parentKey(parentForNewNote);
+          sortForNewNote = childCounts.get(parentKeyValue) ?? 0;
+          childCounts.set(parentKeyValue, sortForNewNote + 1);
+        }
+
+        const newNote: NotesListItemProps = {
+          id: crypto.randomUUID(),
+          title: block.text,
+          priority: null,
+          sort: sortForNewNote,
+          isNew: false,
+          parentId: parentForNewNote,
+        };
+
+        levelAnchors.set(resolvedLevel, newNote.id);
+        for (const key of Array.from(levelAnchors.keys())) {
+          if (key > resolvedLevel) {
+            levelAnchors.delete(key);
+          }
+        }
+
+        return newNote;
+      });
+
+      let newFeed = notesFeed.map((n) => {
+        if (n.id === noteId) {
+          if (!updatedIds.current.includes(n.id)) updatedIds.current.push(n.id);
+          return {
+            ...n,
+            title: firstTitle,
+            isNew: false,
+          };
+        }
+
+        if (
+          sameParent(n.parentId, curNote.parentId) &&
+          (n.sort ?? 0) > (curNote.sort ?? 0)
+        ) {
+          if (!updatedIds.current.includes(n.id)) updatedIds.current.push(n.id);
+          return {
+            ...n,
+            sort: (n.sort ?? 0) + siblingsToInsertAtRoot,
+          };
+        }
+
+        return n;
+      });
+
+      newFeed = [...newFeed, ...newNotes];
+      newFeed = renormalizeSortsForParent(newFeed, curNote.parentId);
+      markSiblingsForSync(newFeed, curNote.parentId, updatedIds.current);
+      for (const nn of newNotes) {
+        if (!updatedIds.current.includes(nn.id)) updatedIds.current.push(nn.id);
+      }
+
+      setIsEditTitle(false);
+      scheduleSyncUpdate();
+      syncFeed.current = newFeed;
+      setNotesFeed(newFeed);
+      const lastCreatedNoteId = newNotes[newNotes.length - 1]?.id;
+      if (lastCreatedNoteId) {
+        let position = 0;
+        const getPositionById = (parentId: string): number | null => {
+          const children = newFeed
+            .filter((n) => (n.parentId ?? 'root') === parentId)
+            .slice()
+            .sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0));
+
+          for (const note of children) {
+            if (note.id === lastCreatedNoteId) return position;
+            position += 1;
+            const nestedFound = getPositionById(note.id);
+            if (nestedFound !== null) return nestedFound;
+          }
+
+          return null;
+        };
+
+        const nextPosition = getPositionById('root');
+        if (nextPosition !== null) {
+          setCursorPosition(nextPosition);
+          focusId.current = lastCreatedNoteId;
+        }
+      }
+      return;
+    }
 
     let newFeed = notesFeed.map((n) => {
       if (n.id === noteId) {
@@ -1474,6 +1626,22 @@ const NotesList: React.FC<Props> = (props) => {
               });
             })()}
           </NotesProvider>
+        </div>
+        <div className={styles.mobile_toolbar + ' md:hidden'}>
+          <Button
+            type="button"
+            variant="primary"
+            onClick={handleMobileAddBelow}
+          >
+            Add below
+          </Button>
+          <Button
+            type="button"
+            variant="primary"
+            onClick={handleMobileAddAbove}
+          >
+            Add above
+          </Button>
         </div>
       </div>
       <div className="flex-[0_0_340px] max-w-[340px] hidden md:block">
