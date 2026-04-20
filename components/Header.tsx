@@ -12,6 +12,7 @@ const Header: React.FC = () => {
     router.pathname === pathname;
 
   const { data: session, status } = useSession();
+  const rightClassName = `flex flex-wrap items-center gap-2 justify-end ${styles.right}`;
 
   const left = (
     <div className={styles.left}>
@@ -40,13 +41,13 @@ const Header: React.FC = () => {
 
   if (status === 'loading') {
     right = (
-      <div className={styles.right}>
+      <div className={rightClassName}>
         <p>Validating session ...</p>
       </div>
     );
   } else if (!session) {
     right = (
-      <div className={styles.right}>
+      <div className={rightClassName}>
         <Link
           href="/api/auth/signin"
           className="login-button"
@@ -58,8 +59,8 @@ const Header: React.FC = () => {
     );
   } else if (session) {
     right = (
-      <div className={styles.right}>
-        <p>
+      <div className={rightClassName}>
+        <p className="text-right">
           {session.user.name} ({session.user.email})
         </p>
         {/*<Link href="/create">*/}
@@ -75,9 +76,12 @@ const Header: React.FC = () => {
   }
 
   return (
-    <header className={styles.header}>
+    <header className="py-6 md:py-8">
       <div className="app-container">
-        <nav className={styles.nav} aria-label="Main">
+        <nav
+          className="flex justify-between items-center gap-8"
+          aria-label="Main"
+        >
           {left}
           {right}
         </nav>
