@@ -27,4 +27,44 @@
   .app-container {
     @apply max-w-6xl mx-auto px-4 md:px-8 box-border;
   }
+
+  .notes-list-item-title-actions {
+    @apply absolute top-[3px] -right-[10px] z-1 flex items-center gap-1;
+  }
+
+  .notes-list-item-icon-button {
+    @apply flex h-4 w-4 shrink-0 cursor-pointer items-center justify-center rounded text-neutral-500 transition-colors hover:text-(--text-primary);
+  }
+
+  .notes-list-item-more-button {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.12s ease;
+  }
+
+  .notes-list-item.notes-list-item--focus .notes-list-item-title:focus-within
+    .notes-list-item-more-button {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .notes-list-item.notes-list-item--focus > .notes-list-item-row
+    .notes-list-item-more-button {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    body:not(.notes-keyboard-nav) .notes-list-item-title:hover .notes-list-item-more-button {
+      opacity: 1;
+      pointer-events: auto;
+    }
+  }
+
+  @media (hover: none) {
+    .notes-list-item-more-button {
+      opacity: 1;
+      pointer-events: auto;
+    }
+  }
 }

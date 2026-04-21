@@ -132,6 +132,9 @@ export function applyFeedModalSync(
 }
 
 const NotesList: React.FC<Props> = (props) => {
+  type NotesItemAction = Parameters<
+    NonNullable<NotesListItemProps['onRunAction']>
+  >[2];
   const reorderTimeoutRef = useRef<number | null>(null);
 
   const updatedIds = useRef<string[]>([]);
@@ -1548,6 +1551,118 @@ const NotesList: React.FC<Props> = (props) => {
     }
   };
 
+  const runMenuAction = (
+    noteId: string,
+    position: number,
+    actionId: NotesItemAction,
+  ) => {
+    focusId.current = noteId;
+    setCursorPosition(position);
+
+    const fakeEvent: {
+      preventDefault: () => void;
+      ctrlKey: boolean;
+      metaKey: boolean;
+      altKey: boolean;
+      shiftKey: boolean;
+      code: string;
+      key: string;
+    } = {
+      preventDefault: () => {},
+      ctrlKey: false,
+      metaKey: false,
+      altKey: false,
+      shiftKey: false,
+      code: '',
+      key: '',
+    };
+
+    switch (actionId) {
+      case 'addBelow':
+        insertNote({ shiftKey: false, altKey: false });
+        return;
+      case 'addAbove':
+        insertNote({ shiftKey: false, altKey: true });
+        return;
+      case 'addSubItem':
+        insertNote({ shiftKey: true, altKey: false });
+        return;
+      case 'editTitle':
+        setIsEditTitle(true);
+        return;
+      case 'openNote':
+        Router.push({ pathname: '/', query: { note: noteId } }, undefined, {
+          shallow: true,
+        });
+        return;
+      case 'navigateUp':
+        eventKeyRef.current = 'ArrowUp';
+        handleNavigate(fakeEvent as KeyboardEvent, false);
+        return;
+      case 'navigateDown':
+        eventKeyRef.current = 'ArrowDown';
+        handleNavigate(fakeEvent as KeyboardEvent, false);
+        return;
+      case 'collapse':
+        eventKeyRef.current = 'ArrowLeft';
+        handleCollapse(fakeEvent as KeyboardEvent, false);
+        return;
+      case 'expand':
+        eventKeyRef.current = 'ArrowRight';
+        handleCollapse(fakeEvent as KeyboardEvent, false);
+        return;
+      case 'indent':
+        eventKeyRef.current = 'ArrowRight';
+        handleIndent(fakeEvent as KeyboardEvent, true);
+        return;
+      case 'outdent':
+        eventKeyRef.current = 'ArrowLeft';
+        handleUnindent(fakeEvent as KeyboardEvent, true);
+        return;
+      case 'reorderUp':
+        eventKeyRef.current = 'ArrowUp';
+        handleSort(fakeEvent as KeyboardEvent, true);
+        return;
+      case 'reorderDown':
+        eventKeyRef.current = 'ArrowDown';
+        handleSort(fakeEvent as KeyboardEvent, true);
+        return;
+      case 'complete':
+        eventKeyRef.current = 'Space';
+        handleComplete(fakeEvent as KeyboardEvent);
+        return;
+      case 'delete':
+        handleDelete(noteId);
+        return;
+      case 'priority1':
+        fakeEvent.code = 'Digit1';
+        handlePriorityShortcut(fakeEvent as KeyboardEvent);
+        return;
+      case 'priority2':
+        fakeEvent.code = 'Digit2';
+        handlePriorityShortcut(fakeEvent as KeyboardEvent);
+        return;
+      case 'priority3':
+        fakeEvent.code = 'Digit3';
+        handlePriorityShortcut(fakeEvent as KeyboardEvent);
+        return;
+      case 'bold':
+        eventKeyRef.current = 'KeyB';
+        handleBoldShortcut(fakeEvent as KeyboardEvent, true);
+        return;
+      case 'italic':
+        eventKeyRef.current = 'KeyI';
+        handleItalicShortcut(fakeEvent as KeyboardEvent, true);
+        return;
+      case 'heading':
+        eventKeyRef.current = 'KeyH';
+        lastKeyRef.current = 'KeyM';
+        handleHeadingShortcut();
+        lastKeyRef.current = null;
+        return;
+    }
+  };
+
   return (
     <div className="flex flex-wrap gap-[30px]">
       <div className="grow basis-0">
@@ -1621,6 +1736,7 @@ const NotesList: React.FC<Props> = (props) => {
                     onComplete={handleCompleteChange}
                     pendingDeleteId={pendingDeleteId}
                     onRestore={handleRestore}
+                    onRunAction={runMenuAction}
                   />
                 );
               });

@@ -4,7 +4,10 @@ import React, {
   useRef,
   useEffect,
   useLayoutEffect,
+  useCallback,
+  useSyncExternalStore,
 } from 'react';
+import { Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/react';
 import { useDrag } from '@use-gesture/react';
 import { useKeyPress } from '@/lib/useKeyPress';
 import {
@@ -18,7 +21,7 @@ import { useNotes } from '@/components/NotesContext';
 import Router from 'next/router';
 
 import ReactMarkdown from 'react-markdown';
-import { ChevronDown, FileText } from 'react-feather';
+import { ChevronDown, FileText, MoreVertical } from 'react-feather';
 
 export type NotesListItemProps = {
   id: string;
@@ -69,6 +72,32 @@ export type NotesListItemProps = {
   onToggleCollapse?: (noteId: string, position: number) => void;
   pendingDeleteId?: string | null;
   onRestore?: (noteId: string) => void;
+  onRunAction?: (
+    noteId: string,
+    position: number,
+    actionId:
+      | 'addBelow'
+      | 'addAbove'
+      | 'addSubItem'
+      | 'editTitle'
+      | 'openNote'
+      | 'navigateUp'
+      | 'navigateDown'
+      | 'collapse'
+      | 'expand'
+      | 'indent'
+      | 'outdent'
+      | 'reorderUp'
+      | 'reorderDown'
+      | 'complete'
+      | 'delete'
+      | 'priority1'
+      | 'priority2'
+      | 'priority3'
+      | 'bold'
+      | 'italic'
+      | 'heading',
+  ) => void;
 };
 
 const NotesListItem: React.FC<NotesListItemProps> = (props) => {
@@ -76,19 +105,25 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
   const MAX_SWIPE_OFFSET = 120;
   const id = props.id;
   const parentId = props.parentId;
+  const onSelect = props.onSelect;
   const [title, setTitle] = useState(props.title);
   const sort = props.sort;
   const [prevTitle, setPrevTitle] = useState(props.title);
   const [isNew, setIsNew] = useState(props.isNew);
+  const [menuSearch, setMenuSearch] = useState('');
+  const [activeActionIndex, setActiveActionIndex] = useState(0);
   const [swipeOffset, setSwipeOffset] = useState(0);
   const [isSwiping, setIsSwiping] = useState(false);
   const swipeOffsetRef = useRef(0);
   const isSwipeGestureActiveRef = useRef(false);
   const isEditing = props.isEdit && props.isFocus;
+  const parentPosition = props.position ?? 0;
   const { callbackRef: titleTextareaCallbackRef } =
     useAutoResizeTextarea(title);
   const isLeaf = (props.familyCount ?? 1) === 1;
   const hasCommittedRef = useRef(false);
+  const [menuRenderKey, setMenuRenderKey] = useState(0);
+  const wasFocusedRef = useRef(Boolean(props.isFocus));
 
   useEffect(() => {
     hasCommittedRef.current = false;
@@ -104,10 +139,89 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
 
   const eventKeyRef = useRef<string | null>(null);
   const titleWrapperRef = useRef<HTMLDivElement | null>(null);
+  const actionsMenuRootRef = useRef<HTMLDivElement | null>(null);
+  const actionsMenuItemsRef = useRef<HTMLDivElement | null>(null);
+  const actionsMenuButtonRef = useRef<HTMLButtonElement | null>(null);
+  const actionsMenuSearchRef = useRef<HTMLInputElement | null>(null);
+  const lastAKeyAtRef = useRef(0);
+  const forceCloseActionsMenu = useCallback(
+    (focusNote: boolean) => {
+      document.body.classList.add('notes-keyboard-nav');
+      const clearKeyboardNavMode = () => {
+        document.body.classList.remove('notes-keyboard-nav');
+      };
+      window.addEventListener('mousemove', clearKeyboardNavMode, {
+        once: true,
+      });
+
+      setMenuRenderKey((prev) => prev + 1);
+      requestAnimationFrame(() => {
+        const activeElement = document.activeElement as HTMLElement | null;
+        if (
+          activeElement &&
+          actionsMenuRootRef.current?.contains(activeElement)
+        ) {
+          activeElement.blur();
+        }
+
+        if (!focusNote) return;
+        onSelect?.(id, parentPosition);
+        actionsMenuButtonRef.current?.blur();
+        titleWrapperRef.current?.focus({ preventScroll: true });
+      });
+    },
+    [id, onSelect, parentPosition],
+  );
   /** Avoid scrollIntoView on every parent re-render (e.g. modal close) while staying focused. */
   const hadFocusRef = useRef(false);
 
   const notesFeed = (useNotes() ?? []) as NotesListItemProps[];
+  const isMac = useSyncExternalStore(
+    () => () => {},
+    () =>
+      typeof navigator !== 'undefined' &&
+      /Mac|iPhone|iPad|iPod/i.test(navigator.platform),
+    () => false,
+  );
+  const actionItems = [
+    ['addBelow', 'Add note', 'Enter'],
+    ['addAbove', 'Add above', isMac ? '⌥ + Enter' : 'Alt + Enter'],
+    ['addSubItem', 'Add a sub-item', isMac ? '⇧ + Enter' : 'Shift + Enter'],
+    ['editTitle', 'Edit title', 'ee'],
+    ['openNote', 'Open note', 'nn'],
+    ['navigateUp', 'Navigate up', '↑'],
+    ['navigateDown', 'Navigate down', '↓'],
+    ['collapse', 'Collapse', '←'],
+    ['expand', 'Expand', '→'],
+    ['indent', 'Indent', isMac ? '⌘ + →' : 'Ctrl + →'],
+    ['outdent', 'Outdent', isMac ? '⌘ + ←' : 'Ctrl + ←'],
+    ['reorderUp', 'Reorder up', isMac ? '⌘ + ↑' : 'Ctrl + ↑'],
+    ['reorderDown', 'Reorder down', isMac ? '⌘ + ↓' : 'Ctrl + ↓'],
+    ['complete', 'Complete/reopen', 'Space'],
+    ['delete', 'Delete', isMac ? 'fn + ⌫' : 'Del'],
+    ['priority1', 'Set/unset priority 1', '1'],
+    ['priority2', 'Set/unset priority 2', '2'],
+    ['priority3', 'Set/unset priority 3', '3'],
+    ['bold', 'Toggle bold', isMac ? '⌘ + B' : 'Ctrl + B'],
+    ['italic', 'Toggle italic', isMac ? '⌘ + I' : 'Ctrl + I'],
+    ['heading', 'Toggle heading', 'mh'],
+  ] as const;
+  const filteredActionItems = actionItems.filter(([, label, hotkey]) => {
+    const q = menuSearch.trim().toLowerCase();
+    if (!q) return true;
+    return label.toLowerCase().includes(q) || hotkey.toLowerCase().includes(q);
+  });
+
+  useEffect(() => {
+    setActiveActionIndex(0);
+  }, [menuSearch, menuRenderKey]);
+
+  useEffect(() => {
+    const activeItem = actionsMenuItemsRef.current?.querySelector<HTMLElement>(
+      '[data-active-action-item="true"]',
+    );
+    activeItem?.scrollIntoView({ block: 'nearest' });
+  }, [activeActionIndex, menuSearch]);
 
   useLayoutEffect(() => {
     if (!props.isFocus) {
@@ -121,6 +235,46 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
       inline: 'start',
     });
   }, [props.isFocus]);
+
+  useEffect(() => {
+    const wasFocused = wasFocusedRef.current;
+    wasFocusedRef.current = Boolean(props.isFocus);
+    if (wasFocused && !props.isFocus) {
+      forceCloseActionsMenu(false);
+    }
+  }, [forceCloseActionsMenu, props.isFocus]);
+
+  useEffect(() => {
+    if (!props.isFocus || isEditing) return;
+
+    const onGlobalKeyDown = (event: KeyboardEvent) => {
+      if (event.defaultPrevented) return;
+      if (event.metaKey || event.ctrlKey || event.altKey) return;
+      if (event.code !== 'KeyA') return;
+
+      const target = event.target as HTMLElement | null;
+      if (
+        target?.tagName === 'INPUT' ||
+        target?.tagName === 'TEXTAREA' ||
+        target?.isContentEditable
+      ) {
+        return;
+      }
+
+      const now = Date.now();
+      const isDoubleA = now - lastAKeyAtRef.current <= 450;
+      lastAKeyAtRef.current = now;
+      if (!isDoubleA) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+      document.body.classList.add('notes-keyboard-nav');
+      actionsMenuButtonRef.current?.click();
+    };
+
+    window.addEventListener('keydown', onGlobalKeyDown);
+    return () => window.removeEventListener('keydown', onGlobalKeyDown);
+  }, [props.isFocus, isEditing]);
 
   // if (props.isFocus && !isOnScreen) {
   //
@@ -235,7 +389,6 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
     props.onFocus(props.id);
   }
 
-  const parentPosition = props.position ?? 0;
   const childNotes = notesFeed
     .filter((childNote) => childNote.parentId == props.id)
     .slice()
@@ -287,7 +440,9 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
     <div
       className={
         styles.notes_list_item +
+        ' notes-list-item' +
         (props.isFocus ? ' ' + styles.focus : '') +
+        (props.isFocus ? ' notes-list-item--focus' : '') +
         (props.parentId != 'root' ? ' ml-4 md:ml-8' : '') +
         (props.complete ? ' ' + styles.complete : '') +
         (props.collapsed ? ' ' + styles.collapsed : '')
@@ -296,7 +451,9 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
     >
       {/*<div>"collapsed: " + {props.collapsed && "true"}</div>*/}
       {/*<div>"children: " + {props.familyCount > 1 && "true"}</div>*/}
-      <div className={`${styles.notes_list_item_row} relative`}>
+      <div
+        className={`${styles.notes_list_item_row} notes-list-item-row relative`}
+      >
         <div className="pointer-events-none absolute inset-0 flex items-center justify-between md:hidden">
           <span
             className="inline-flex h-8 items-center rounded-md bg-(--accent) px-3 text-xs font-semibold uppercase tracking-wide leading-none text-white transition-opacity"
@@ -312,8 +469,9 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
           </span>
         </div>
         <div
-          className={styles.notes_list_item_title_wrapper}
+          className={`${styles.notes_list_item_title_wrapper} notes-list-item-title outline-none focus:outline-none focus-visible:outline-none`}
           ref={titleWrapperRef}
+          tabIndex={-1}
           {...bindSwipe()}
           style={{
             touchAction: 'pan-y',
@@ -443,26 +601,177 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
                     {props.title}
                   </ReactMarkdown>
                 </span>
-                {props.hasContent && (
-                  <div
-                    className={styles.notes_list_item_content_icon}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      props.onSelect?.(id, parentPosition);
-                      Router.push(
-                        { pathname: '/', query: { note: id } },
-                        undefined,
-                        { shallow: true },
-                      );
-                    }}
-                    onDoubleClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                    }}
+                <div className="notes-list-item-title-actions">
+                  {props.hasContent && (
+                    <button
+                      type="button"
+                      aria-label="Open note"
+                      className="notes-list-item-icon-button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        props.onSelect?.(id, parentPosition);
+                        Router.push(
+                          { pathname: '/', query: { note: id } },
+                          undefined,
+                          { shallow: true },
+                        );
+                      }}
+                      onDoubleClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                      }}
+                    >
+                      <FileText size={16} />
+                    </button>
+                  )}
+                  <Menu
+                    as="div"
+                    key={`${id}-${menuRenderKey}`}
+                    className="relative"
+                    ref={actionsMenuRootRef}
+                    onClick={(e) => e.stopPropagation()}
                   >
-                    <FileText size={16} />
-                  </div>
-                )}
+                    <MenuButton
+                      ref={actionsMenuButtonRef}
+                      aria-label="Note actions"
+                      className="notes-list-item-icon-button notes-list-item-more-button"
+                      onClick={() => {
+                        setMenuSearch('');
+                        props.onSelect?.(id, parentPosition);
+                        setTimeout(() => {
+                          actionsMenuSearchRef.current?.focus({
+                            preventScroll: true,
+                          });
+                        }, 0);
+                      }}
+                      onDoubleClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                      }}
+                    >
+                      <MoreVertical size={16} />
+                    </MenuButton>
+                    <MenuItems
+                      anchor={{ to: 'bottom end', gap: '4px', padding: '8px' }}
+                      modal={false}
+                      ref={actionsMenuItemsRef}
+                      className="z-20 w-72 origin-top-right overflow-y-auto rounded-md border border-black/10 bg-white p-1 shadow-lg outline-none"
+                      style={
+                        {
+                          '--anchor-max-height': '300px',
+                        } as React.CSSProperties
+                      }
+                      onKeyDownCapture={(e) => {
+                        if (e.key !== 'Escape') return;
+                        e.preventDefault();
+                        e.stopPropagation();
+                        forceCloseActionsMenu(true);
+                      }}
+                    >
+                      <div className="sticky top-0 z-10 -mx-1 -mt-1 mb-1 border-b border-black/5 bg-white px-1 pt-1 pb-1">
+                        <input
+                          ref={actionsMenuSearchRef}
+                          type="text"
+                          value={menuSearch}
+                          onChange={(e) => setMenuSearch(e.target.value)}
+                          placeholder="Search actions..."
+                          className="w-full rounded border border-black/10 px-2 py-1 text-sm outline-none focus:border-(--text-primary)"
+                          onKeyDown={(e) => {
+                            if (e.key === 'ArrowDown') {
+                              e.preventDefault();
+                              if (!filteredActionItems.length) return;
+                              setActiveActionIndex((prev) =>
+                                Math.min(
+                                  prev + 1,
+                                  filteredActionItems.length - 1,
+                                ),
+                              );
+                              return;
+                            }
+                            if (e.key === 'ArrowUp') {
+                              e.preventDefault();
+                              if (!filteredActionItems.length) return;
+                              setActiveActionIndex((prev) =>
+                                Math.max(prev - 1, 0),
+                              );
+                              return;
+                            }
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              const active =
+                                filteredActionItems[activeActionIndex];
+                              if (!active) return;
+                              props.onRunAction?.(
+                                id,
+                                parentPosition,
+                                active[0] as NonNullable<
+                                  NotesListItemProps['onRunAction']
+                                > extends (
+                                  noteId: string,
+                                  position: number,
+                                  action: infer A,
+                                ) => void
+                                  ? A
+                                  : never,
+                              );
+                              forceCloseActionsMenu(true);
+                            }
+                          }}
+                        />
+                      </div>
+                      {filteredActionItems.map(([actionId, label, hotkey]) => (
+                        <MenuItem key={actionId}>
+                          {() => (
+                            <button
+                              type="button"
+                              data-action-item="true"
+                              data-active-action-item={
+                                filteredActionItems[activeActionIndex]?.[0] ===
+                                actionId
+                                  ? 'true'
+                                  : 'false'
+                              }
+                              className={`flex w-full items-center justify-between rounded px-2 py-1.5 text-left text-sm ${
+                                filteredActionItems[activeActionIndex]?.[0] ===
+                                actionId
+                                  ? 'bg-neutral-100 text-(--text-primary)'
+                                  : 'text-(--text-primary)'
+                              }`}
+                              onMouseDown={(e) => e.preventDefault()}
+                              onMouseEnter={() => {
+                                const idx = filteredActionItems.findIndex(
+                                  ([id]) => id === actionId,
+                                );
+                                if (idx >= 0) setActiveActionIndex(idx);
+                              }}
+                              onClick={() => {
+                                props.onRunAction?.(
+                                  id,
+                                  parentPosition,
+                                  actionId as NonNullable<
+                                    NotesListItemProps['onRunAction']
+                                  > extends (
+                                    noteId: string,
+                                    position: number,
+                                    action: infer A,
+                                  ) => void
+                                    ? A
+                                    : never,
+                                );
+                                forceCloseActionsMenu(true);
+                              }}
+                            >
+                              <span>{label}</span>
+                              <span className="ml-3 text-xs text-neutral-500">
+                                {hotkey}
+                              </span>
+                            </button>
+                          )}
+                        </MenuItem>
+                      ))}
+                    </MenuItems>
+                  </Menu>
+                </div>
               </div>
             </>
           ) : (
@@ -548,6 +857,7 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
             onComplete={props.onComplete}
             pendingDeleteId={props.pendingDeleteId}
             onRestore={props.onRestore}
+            onRunAction={props.onRunAction}
           />
         );
       })}
