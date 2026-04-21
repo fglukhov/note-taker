@@ -89,7 +89,7 @@
 
 .notes_list_item_title {
   position: relative;
-  padding-right: 24px;
+  padding-right: 36px;
   overflow-wrap: anywhere;
   word-break: break-word;
 
@@ -179,18 +179,6 @@
   justify-content: center;
   align-items: center;
   transition: all 0.15s ease;
-  cursor: pointer;
-}
-
-.notes_list_item_content_icon {
-  width: 16px;
-  height: 16px;
-  position: absolute;
-  right: 0;
-  top: 3px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
   cursor: pointer;
 }
 
