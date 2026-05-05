@@ -21,6 +21,7 @@ import NotesHotkeysHints from '@/components/NotesHotkeysHints';
 import { Button } from '@/components/Button';
 import styles from '@/components/NotesList.module.scss';
 import Router, { useRouter } from 'next/router';
+import { flushSync } from 'react-dom';
 
 // TODO tidy up types
 // TODO handle page reload on cmd+R
@@ -75,6 +76,11 @@ type SyncChangesResponse = {
 };
 
 const UNDO_DELETE_MS = 10_000;
+
+/** Returns true on viewport widths where the mobile toolbar is shown (`md:hidden` = < 768 px). */
+const isNotesMobileViewport = (): boolean =>
+  typeof window !== 'undefined' &&
+  window.matchMedia('(max-width: 767px)').matches;
 
 //let reorderInterval = null;
 let timeout: ReturnType<typeof setTimeout> | null = null;
@@ -435,6 +441,8 @@ const NotesList: React.FC<Props> = (props) => {
 
   const insertNote = (
     event: KeyboardEvent | { shiftKey: boolean; altKey: boolean } | null,
+    /** Pass true only from pointer-driven toolbar buttons that need iOS keyboard focus. */
+    syncCommit = false,
   ): void => {
     clearDeleteUndo();
 
@@ -545,27 +553,42 @@ const NotesList: React.FC<Props> = (props) => {
     const newIdx = updatedIds.current.indexOf(newId);
     if (newIdx >= 0) updatedIds.current.splice(newIdx, 1);
 
-    // TODO remove this timeout. It prevents the new note form from being submitted immediately.
+    // TODO remove this timeout. It prevents the new note form from being submitted immediately
+    // when the insert is triggered by Enter (keydown). Pointer-driven inserts need a synchronous
+    // commit so Mobile Safari keeps keyboard focus inside the new title field.
 
-    setTimeout(function () {
+    const commitInsertNoteState = () => {
       setCursorPosition(insertAt);
       setIsEditTitle(true);
       focusId.current = newId;
       syncFeed.current = newFeed;
       setNotesFeed(newFeed);
-    }, 1);
+    };
+
+    const fromKeyboardShortcut =
+      event !== null &&
+      typeof KeyboardEvent !== 'undefined' &&
+      event instanceof KeyboardEvent;
+
+    if (!fromKeyboardShortcut && syncCommit) {
+      flushSync(commitInsertNoteState);
+    } else {
+      setTimeout(function () {
+        commitInsertNoteState();
+      }, 1);
+    }
   };
 
   const handleMobileAddBelow = () => {
-    insertNote({ shiftKey: false, altKey: false });
+    insertNote({ shiftKey: false, altKey: false }, true);
   };
 
   const handleMobileAddAbove = () => {
     if (!focusId.current) {
-      insertNote({ shiftKey: false, altKey: false });
+      insertNote({ shiftKey: false, altKey: false }, true);
       return;
     }
-    insertNote({ shiftKey: false, altKey: true });
+    insertNote({ shiftKey: false, altKey: true }, true);
   };
 
   useEffect(() => {
@@ -1697,7 +1720,7 @@ const NotesList: React.FC<Props> = (props) => {
 
     updatedIds.current.push(noteId);
 
-    if (curNote.isNew) {
+    if (curNote.isNew && !isNotesMobileViewport()) {
       newFeed.map((n) => {
         if (
           sameParent(n.parentId, curNote.parentId) &&
@@ -1824,13 +1847,13 @@ const NotesList: React.FC<Props> = (props) => {
 
     switch (actionId) {
       case 'addBelow':
-        insertNote({ shiftKey: false, altKey: false });
+        insertNote({ shiftKey: false, altKey: false }, true);
         return;
       case 'addAbove':
-        insertNote({ shiftKey: false, altKey: true });
+        insertNote({ shiftKey: false, altKey: true }, true);
         return;
       case 'addSubItem':
-        insertNote({ shiftKey: true, altKey: false });
+        insertNote({ shiftKey: true, altKey: false }, true);
         return;
       case 'editTitle':
         setIsEditTitle(true);

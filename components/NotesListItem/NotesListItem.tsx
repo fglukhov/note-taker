@@ -116,7 +116,7 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
   const isSwipeGestureActiveRef = useRef(false);
   const isEditing = props.isEdit && props.isFocus;
   const parentPosition = props.position ?? 0;
-  const { callbackRef: titleTextareaCallbackRef } =
+  const { ref: titleTextareaRef, callbackRef: titleTextareaCallbackRef } =
     useAutoResizeTextarea(title);
   const isLeaf = (props.familyCount ?? 1) === 1;
   const hasCommittedRef = useRef(false);
@@ -132,6 +132,31 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isEditing]);
+
+  // iOS Safari does not always fire `blur` when the virtual keyboard is
+  // dismissed (e.g. by scrolling or the "Done" button on non-text keyboards).
+  // `visualViewport.resize` fires whenever the viewport height changes, which
+  // happens every time the keyboard opens or closes. When the height GROWS
+  // (keyboard going away), we programmatically blur the textarea so that
+  // `onBlur → commitTitle()` runs and `isEditTitle` is properly cleared.
+  useEffect(() => {
+    if (!isEditing) return;
+    const vv =
+      typeof window !== 'undefined' ? window.visualViewport : undefined;
+    if (!vv) return;
+
+    let prevHeight = vv.height;
+
+    const onViewportResize = () => {
+      if (vv.height > prevHeight) {
+        titleTextareaRef.current?.blur();
+      }
+      prevHeight = vv.height;
+    };
+
+    vv.addEventListener('resize', onViewportResize);
+    return () => vv.removeEventListener('resize', onViewportResize);
+  }, [isEditing, titleTextareaRef]);
 
   //const { isInViewport, ref } = useInViewport();
 
@@ -674,10 +699,11 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
                               const active =
                                 filteredActionItems[activeActionIndex];
                               if (!active) return;
+                              const activeActionId = active[0];
                               props.onRunAction?.(
                                 id,
                                 parentPosition,
-                                active[0] as NonNullable<
+                                activeActionId as NonNullable<
                                   NotesListItemProps['onRunAction']
                                 > extends (
                                   noteId: string,
@@ -687,7 +713,11 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
                                   ? A
                                   : never,
                               );
-                              forceCloseActionsMenu(true);
+                              const isAddAction =
+                                activeActionId === 'addBelow' ||
+                                activeActionId === 'addAbove' ||
+                                activeActionId === 'addSubItem';
+                              forceCloseActionsMenu(!isAddAction);
                             }
                           }}
                         />
@@ -731,11 +761,15 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
                                     ? A
                                     : never,
                                 );
-                                forceCloseActionsMenu(true);
+                                const isAddAction =
+                                  actionId === 'addBelow' ||
+                                  actionId === 'addAbove' ||
+                                  actionId === 'addSubItem';
+                                forceCloseActionsMenu(!isAddAction);
                               }}
                             >
                               <span>{label}</span>
-                              <span className="ml-3 text-xs text-neutral-500">
+                              <span className="ml-3 text-xs text-neutral-500 hidden md:inline">
                                 {hotkey}
                               </span>
                             </button>
@@ -764,6 +798,7 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
                     const isMod = e.metaKey || e.ctrlKey;
                     if (e.key === 'Enter' && !e.shiftKey) {
                       e.preventDefault();
+                      e.stopPropagation();
                       commitTitle();
                     } else if (isMod && e.key === 'b') {
                       e.preventDefault();
