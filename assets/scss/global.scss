@@ -71,6 +71,10 @@ body {
   align-items: stretch;
   justify-content: center;
   padding: 1.5rem;
+
+  @media (max-width: 767px) {
+    padding: 5px;
+  }
 }
 
 .note_modal {
@@ -84,6 +88,11 @@ body {
   outline: none;
   box-shadow: var(--shadow-modal);
   color: rgba(0, 0, 0, 0.9);
+
+  @media (max-width: 767px) {
+    padding: 0.75rem 0.625rem;
+    border-radius: 10px;
+  }
 }
 
 .modal_loading {
@@ -105,9 +114,13 @@ body {
   font-weight: 700;
   margin: 0;
   line-height: 1.2;
-  padding: 0.75rem 0.9rem;
+  padding: 0.75rem 0.9rem 0.75rem 24px;
   border: 1px solid transparent;
   border-radius: 6px;
+
+  @media (max-width: 767px) {
+    padding: 0.5rem 0.6rem 0.5rem 10px;
+  }
 }
 
 .close_button {
@@ -164,7 +177,7 @@ body {
   font-weight: 700;
   line-height: 1.2;
   font-family: inherit;
-  padding: 0.75rem 0.9rem;
+  padding: 0.75rem 0.9rem 0.75rem 24px;
   border-radius: 6px;
   border: 1px solid var(--border-input);
   outline: none;
@@ -172,6 +185,12 @@ body {
   resize: none;
   overflow: hidden;
   display: block;
+
+  @media (max-width: 767px) {
+    /* ≥16 px — iOS не зумит при фокусе */
+    font-size: 1rem;
+    padding: 0.5rem 0.6rem 0.5rem 10px;
+  }
 }
 
 .modal_title_clickable {
@@ -316,13 +335,18 @@ body {
     .ProseMirror {
       flex: 1 1 auto;
       overflow-y: auto;
-      /* Левый отступ увеличен — блок-хэндлы (кнопка + и drag-иконка) помещаются */
-      padding: 10px 24px 10px 64px;
+      padding: 10px 24px;
       font-size: 0.95rem;
       line-height: 1.6;
       outline: none;
       /* Нативный курсор вместо виртуального — всегда корректно позиционируется */
       caret-color: var(--accent);
+
+      @media (max-width: 767px) {
+        padding: 8px 10px;
+        /* ≥16 px — iOS не зумит при фокусе */
+        font-size: 1rem;
+      }
     }
   }
 }
@@ -346,6 +370,12 @@ body {
 
   &:focus {
     border-color: var(--accent);
+  }
+
+  @media (max-width: 767px) {
+    /* ≥16 px — iOS не зумит при фокусе */
+    font-size: 1rem;
+    padding: 8px 10px;
   }
 }
 

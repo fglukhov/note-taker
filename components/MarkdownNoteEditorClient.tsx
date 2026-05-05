@@ -51,6 +51,7 @@ const CrepeEditor: React.FC<{
       defaultValue: initialValue,
       features: {
         [Crepe.Feature.Cursor]: false,
+        [Crepe.Feature.BlockEdit]: false,
       },
       featureConfigs: {
         [Crepe.Feature.Placeholder]: {
