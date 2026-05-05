@@ -21,6 +21,7 @@ import NotesHotkeysHints from '@/components/NotesHotkeysHints';
 import { Button } from '@/components/Button';
 import styles from '@/components/NotesList.module.scss';
 import Router, { useRouter } from 'next/router';
+import { flushSync } from 'react-dom';
 
 // TODO tidy up types
 // TODO handle page reload on cmd+R
@@ -545,15 +546,30 @@ const NotesList: React.FC<Props> = (props) => {
     const newIdx = updatedIds.current.indexOf(newId);
     if (newIdx >= 0) updatedIds.current.splice(newIdx, 1);
 
-    // TODO remove this timeout. It prevents the new note form from being submitted immediately.
+    // TODO remove this timeout. It prevents the new note form from being submitted immediately
+    // when the insert is triggered by Enter (keydown). Pointer-driven inserts need a synchronous
+    // commit so Mobile Safari keeps keyboard focus inside the new title field.
 
-    setTimeout(function () {
+    const commitInsertNoteState = () => {
       setCursorPosition(insertAt);
       setIsEditTitle(true);
       focusId.current = newId;
       syncFeed.current = newFeed;
       setNotesFeed(newFeed);
-    }, 1);
+    };
+
+    const fromKeyboardShortcut =
+      event !== null &&
+      typeof KeyboardEvent !== 'undefined' &&
+      event instanceof KeyboardEvent;
+
+    if (fromKeyboardShortcut) {
+      setTimeout(function () {
+        commitInsertNoteState();
+      }, 1);
+    } else {
+      flushSync(commitInsertNoteState);
+    }
   };
 
   const handleMobileAddBelow = () => {
