@@ -77,6 +77,11 @@ type SyncChangesResponse = {
 
 const UNDO_DELETE_MS = 10_000;
 
+/** Returns true on viewport widths where the mobile toolbar is shown (`md:hidden` = < 768 px). */
+const isNotesMobileViewport = (): boolean =>
+  typeof window !== 'undefined' &&
+  window.matchMedia('(max-width: 767px)').matches;
+
 //let reorderInterval = null;
 let timeout: ReturnType<typeof setTimeout> | null = null;
 
@@ -436,6 +441,8 @@ const NotesList: React.FC<Props> = (props) => {
 
   const insertNote = (
     event: KeyboardEvent | { shiftKey: boolean; altKey: boolean } | null,
+    /** Pass true only from pointer-driven toolbar buttons that need iOS keyboard focus. */
+    syncCommit = false,
   ): void => {
     clearDeleteUndo();
 
@@ -563,25 +570,25 @@ const NotesList: React.FC<Props> = (props) => {
       typeof KeyboardEvent !== 'undefined' &&
       event instanceof KeyboardEvent;
 
-    if (fromKeyboardShortcut) {
+    if (!fromKeyboardShortcut && syncCommit) {
+      flushSync(commitInsertNoteState);
+    } else {
       setTimeout(function () {
         commitInsertNoteState();
       }, 1);
-    } else {
-      flushSync(commitInsertNoteState);
     }
   };
 
   const handleMobileAddBelow = () => {
-    insertNote({ shiftKey: false, altKey: false });
+    insertNote({ shiftKey: false, altKey: false }, true);
   };
 
   const handleMobileAddAbove = () => {
     if (!focusId.current) {
-      insertNote({ shiftKey: false, altKey: false });
+      insertNote({ shiftKey: false, altKey: false }, true);
       return;
     }
-    insertNote({ shiftKey: false, altKey: true });
+    insertNote({ shiftKey: false, altKey: true }, true);
   };
 
   useEffect(() => {
@@ -1713,7 +1720,7 @@ const NotesList: React.FC<Props> = (props) => {
 
     updatedIds.current.push(noteId);
 
-    if (curNote.isNew) {
+    if (curNote.isNew && !isNotesMobileViewport()) {
       newFeed.map((n) => {
         if (
           sameParent(n.parentId, curNote.parentId) &&
@@ -1840,13 +1847,13 @@ const NotesList: React.FC<Props> = (props) => {
 
     switch (actionId) {
       case 'addBelow':
-        insertNote({ shiftKey: false, altKey: false });
+        insertNote({ shiftKey: false, altKey: false }, true);
         return;
       case 'addAbove':
-        insertNote({ shiftKey: false, altKey: true });
+        insertNote({ shiftKey: false, altKey: true }, true);
         return;
       case 'addSubItem':
-        insertNote({ shiftKey: true, altKey: false });
+        insertNote({ shiftKey: true, altKey: false }, true);
         return;
       case 'editTitle':
         setIsEditTitle(true);

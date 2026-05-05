@@ -699,10 +699,11 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
                               const active =
                                 filteredActionItems[activeActionIndex];
                               if (!active) return;
+                              const activeActionId = active[0];
                               props.onRunAction?.(
                                 id,
                                 parentPosition,
-                                active[0] as NonNullable<
+                                activeActionId as NonNullable<
                                   NotesListItemProps['onRunAction']
                                 > extends (
                                   noteId: string,
@@ -712,7 +713,11 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
                                   ? A
                                   : never,
                               );
-                              forceCloseActionsMenu(true);
+                              const isAddAction =
+                                activeActionId === 'addBelow' ||
+                                activeActionId === 'addAbove' ||
+                                activeActionId === 'addSubItem';
+                              forceCloseActionsMenu(!isAddAction);
                             }
                           }}
                         />
@@ -756,11 +761,15 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
                                     ? A
                                     : never,
                                 );
-                                forceCloseActionsMenu(true);
+                                const isAddAction =
+                                  actionId === 'addBelow' ||
+                                  actionId === 'addAbove' ||
+                                  actionId === 'addSubItem';
+                                forceCloseActionsMenu(!isAddAction);
                               }}
                             >
                               <span>{label}</span>
-                              <span className="ml-3 text-xs text-neutral-500">
+                              <span className="ml-3 text-xs text-neutral-500 hidden md:inline">
                                 {hotkey}
                               </span>
                             </button>
