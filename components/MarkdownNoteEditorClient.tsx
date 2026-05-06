@@ -15,6 +15,7 @@ import {
   wrapInOrderedListCommand,
 } from '@milkdown/kit/preset/commonmark';
 import { languages as allLanguages } from '@codemirror/language-data';
+import { EditorView } from '@codemirror/view';
 
 import { githubLight } from '@uiw/codemirror-theme-github';
 import { codeLangDetectPlugin } from '@/lib/codeLangDetect';
@@ -67,6 +68,7 @@ const CrepeEditor: React.FC<{
         [Crepe.Feature.CodeMirror]: {
           languages: allLanguages,
           theme: githubLight,
+          extensions: [EditorView.lineWrapping],
         },
         [Crepe.Feature.ImageBlock]: {
           onUpload: async (file: File) => {
