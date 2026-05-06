@@ -5,6 +5,7 @@ node_modules/
 .editorconfig
 .env
 .env.*
+.wrangler
 
 certificates
 *storybook.log

@@ -3,6 +3,7 @@
 import prisma from '@/lib/prisma';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/pages/api/auth/[...nextauth]';
+import { extractR2Keys, deleteR2Keys } from '@/lib/r2Images';
 
 // DELETE /api/delete/:id
 export default async function handle(req, res) {
@@ -57,6 +58,7 @@ export default async function handle(req, res) {
       },
       select: {
         id: true,
+        content: true,
       },
     });
 
@@ -80,6 +82,12 @@ export default async function handle(req, res) {
         },
       }),
     ]);
+
+    const allKeys = new Set<string>();
+    for (const note of notesToDelete) {
+      extractR2Keys(note.content).forEach((k) => allKeys.add(k));
+    }
+    deleteR2Keys(Array.from(allKeys)).catch(console.error);
 
     return res.json({ deleted: notesToDelete.length });
   } catch (e) {

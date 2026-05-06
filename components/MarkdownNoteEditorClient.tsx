@@ -3,6 +3,8 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Crepe } from '@milkdown/crepe';
 import { callCommand } from '@milkdown/kit/utils';
 import type { CmdKey } from '@milkdown/kit/core';
+import { editorViewCtx } from '@milkdown/kit/core';
+import { uploadConfig } from '@milkdown/kit/plugin/upload';
 import {
   toggleStrongCommand,
   toggleEmphasisCommand,
@@ -16,6 +18,8 @@ import { languages as allLanguages } from '@codemirror/language-data';
 
 import { githubLight } from '@uiw/codemirror-theme-github';
 import { codeLangDetectPlugin } from '@/lib/codeLangDetect';
+import { uploadImage } from '@/lib/uploadImage';
+import { uploadImageFromUrl } from '@/lib/uploadImageFromUrl';
 
 type Props = {
   value: string;
@@ -45,6 +49,8 @@ const CrepeEditor: React.FC<{
 
   useEffect(() => {
     if (!containerRef.current) return;
+    const pendingUploadSrc = new Set<string>();
+    const processedSrc = new Set<string>();
 
     const crepe = new Crepe({
       root: containerRef.current,
@@ -62,13 +68,95 @@ const CrepeEditor: React.FC<{
           languages: allLanguages,
           theme: githubLight,
         },
+        [Crepe.Feature.ImageBlock]: {
+          onUpload: async (file: File) => {
+            const result = await uploadImage(file);
+            return result.url;
+          },
+        },
       },
     });
 
     crepe.editor.use(codeLangDetectPlugin);
+    crepe.editor.config((ctx) => {
+      ctx.update(uploadConfig.key, (prev) => ({
+        ...prev,
+        enableHtmlFileUploader: true,
+      }));
+    });
+
+    const promoteTempImagesToR2 = () => {
+      crepe.editor.action((ctx) => {
+        const view = ctx.get(editorViewCtx);
+        const imageNodeTypes = [
+          view.state.schema.nodes['image-block'],
+          view.state.schema.nodes['image-inline'],
+          view.state.schema.nodes.image,
+        ].filter(Boolean);
+        if (!imageNodeTypes.length) return;
+
+        const candidates: Array<{ pos: number; src: string }> = [];
+        view.state.doc.descendants((node, pos) => {
+          if (!imageNodeTypes.includes(node.type)) return true;
+          const src = typeof node.attrs.src === 'string' ? node.attrs.src : '';
+          if (!src) return true;
+          const isTempSrc = src.startsWith('blob:') || src.startsWith('data:');
+          const isRemoteSrc =
+            src.startsWith('http://') || src.startsWith('https://');
+          const isAlreadyOwned =
+            src.includes('/api/images/file/') ||
+            src.includes('.r2.dev/') ||
+            src.includes('.r2.cloudflarestorage.com/');
+          if ((!isTempSrc && !isRemoteSrc) || isAlreadyOwned) return true;
+          if (pendingUploadSrc.has(src) || processedSrc.has(src)) return true;
+          candidates.push({ pos, src });
+          return true;
+        });
+
+        for (const { pos, src } of candidates) {
+          pendingUploadSrc.add(src);
+          const isTempSrc = src.startsWith('blob:') || src.startsWith('data:');
+          const uploadPromise = isTempSrc
+            ? fetch(src)
+                .then((response) => response.blob())
+                .then((blob) => {
+                  const file = new File([blob], 'pasted-image', {
+                    type: blob.type || 'image/png',
+                  });
+                  return uploadImage(file);
+                })
+            : uploadImageFromUrl(src);
+
+          uploadPromise
+            .then((result) => {
+              const currentNode = view.state.doc.nodeAt(pos);
+              if (!currentNode || !imageNodeTypes.includes(currentNode.type))
+                return;
+              if (currentNode.attrs.src !== src) return;
+              const tr = view.state.tr.setNodeMarkup(pos, undefined, {
+                ...currentNode.attrs,
+                src: result.url,
+              });
+              view.dispatch(tr);
+              processedSrc.add(result.url);
+            })
+            .catch((error) => {
+              console.error('Temporary image promotion failed:', error);
+            })
+            .finally(() => {
+              pendingUploadSrc.delete(src);
+              processedSrc.add(src);
+              if (isTempSrc && src.startsWith('blob:')) {
+                URL.revokeObjectURL(src);
+              }
+            });
+        }
+      });
+    };
 
     crepe.on((api) => {
       api.markdownUpdated((_ctx, markdown) => {
+        promoteTempImagesToR2();
         onChangeRef.current(markdown);
       });
     });
@@ -97,7 +185,8 @@ const SourceEditor: React.FC<{
   onChange: (v: string) => void;
   autoFocus?: boolean;
   placeholder?: string;
-}> = ({ value, onChange, autoFocus, placeholder }) => (
+  onPaste?: React.ClipboardEventHandler<HTMLTextAreaElement>;
+}> = ({ value, onChange, autoFocus, placeholder, onPaste }) => (
   <textarea
     className="md_source_editor"
     value={value}
@@ -105,6 +194,7 @@ const SourceEditor: React.FC<{
     autoFocus={autoFocus}
     placeholder={placeholder}
     spellCheck={false}
+    onPaste={onPaste}
   />
 );
 
@@ -223,6 +313,40 @@ const MarkdownNoteEditorClient: React.FC<Props> = ({
     });
   }, []);
 
+  const handleSourcePaste = useCallback<
+    React.ClipboardEventHandler<HTMLTextAreaElement>
+  >(
+    async (e) => {
+      const items = Array.from(e.clipboardData?.items ?? []);
+      const imageItem = items.find((item) => item.type.startsWith('image/'));
+      if (!imageItem) return;
+
+      const file = imageItem.getAsFile();
+      if (!file) return;
+
+      e.preventDefault();
+
+      const textarea = e.currentTarget;
+      const start = textarea.selectionStart ?? 0;
+      const end = textarea.selectionEnd ?? start;
+
+      try {
+        const result = await uploadImage(file);
+        const nextValue =
+          value.slice(0, start) + result.markdown + value.slice(end);
+        onChange(nextValue);
+
+        requestAnimationFrame(() => {
+          const pos = start + result.markdown.length;
+          textarea.setSelectionRange(pos, pos);
+        });
+      } catch (error) {
+        console.error('Image upload failed:', error);
+      }
+    },
+    [onChange, value],
+  );
+
   return (
     <div className="md_editor_wrap">
       <div className="md_editor_toolbar">
@@ -254,6 +378,7 @@ const MarkdownNoteEditorClient: React.FC<Props> = ({
           onChange={onChange}
           autoFocus
           placeholder={placeholder}
+          onPaste={handleSourcePaste}
         />
       )}
     </div>
