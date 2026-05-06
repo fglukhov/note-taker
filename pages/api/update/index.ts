@@ -3,6 +3,7 @@
 import prisma from '@/lib/prisma';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/pages/api/auth/[...nextauth]';
+import { extractR2Keys, deleteR2Keys } from '@/lib/r2Images';
 
 export const config = {
   api: { externalResolver: true },
@@ -70,12 +71,12 @@ export default async function handle(req, res) {
     const deleteRow = async (id) => {
       const existing = await prisma.note.findFirst({
         where: { id, authorId: user.id },
-        select: { id: true },
+        select: { id: true, content: true },
       });
       if (!existing) {
         return null;
       }
-      return prisma.$transaction([
+      const result = await prisma.$transaction([
         prisma.noteDeletion.create({
           data: {
             noteId: existing.id,
@@ -84,6 +85,10 @@ export default async function handle(req, res) {
         }),
         prisma.note.delete({ where: { id } }),
       ]);
+      deleteR2Keys(Array.from(extractR2Keys(existing.content))).catch(
+        console.error,
+      );
+      return result;
     };
 
     const results = await Promise.all(

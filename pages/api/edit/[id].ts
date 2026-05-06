@@ -3,6 +3,7 @@
 import prisma from '@/lib/prisma';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/pages/api/auth/[...nextauth]';
+import { extractR2Keys, deleteR2Keys } from '@/lib/r2Images';
 
 export default async function handle(req, res) {
   try {
@@ -33,6 +34,11 @@ export default async function handle(req, res) {
     }
     // ============================
 
+    const oldNote = await prisma.note.findFirst({
+      where: { id: noteId, authorId: user.id },
+      select: { content: true },
+    });
+
     // обновляем только свою заметку
     const updated = await prisma.note.updateMany({
       where: {
@@ -46,6 +52,13 @@ export default async function handle(req, res) {
           normalizedContent != null ? normalizedContent.length > 0 : undefined,
       },
     });
+
+    if (updated.count > 0 && normalizedContent !== undefined) {
+      const oldKeys = extractR2Keys(oldNote?.content);
+      const newKeys = extractR2Keys(normalizedContent);
+      const orphans = [...oldKeys].filter((k) => !newKeys.has(k));
+      deleteR2Keys(orphans).catch(console.error);
+    }
 
     if (updated.count === 0) {
       return res.status(404).json({ error: 'Note not found' });
