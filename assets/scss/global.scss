@@ -315,6 +315,7 @@ body {
     display: flex;
     flex-direction: column;
     min-height: 0;
+    word-wrap: break-word;
 
     /* Override Crepe frame-theme colors with our CSS vars */
     --crepe-color-background: var(--bg-surface);
@@ -333,21 +334,23 @@ body {
     --crepe-font-title:
       -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial,
       sans-serif;
-    --crepe-font-code: var(--font-jetbrains-mono), 'SF Mono', 'Fira Code',
-      'Consolas', monospace;
+    --crepe-font-code:
+      var(--font-jetbrains-mono), 'SF Mono', 'Fira Code', 'Consolas', monospace;
 
     .milkdown-code-block {
       margin: 16px 0;
       padding: 8px 10px 20px 10px;
       font-size: 14px;
-      font-family: var(--font-jetbrains-mono), 'SF Mono', 'Fira Code',
-        'Consolas', monospace;
+      font-family:
+        var(--font-jetbrains-mono), 'SF Mono', 'Fira Code', 'Consolas',
+        monospace;
 
       .cm-editor .cm-scroller,
       .cm-editor .cm-content,
       .cm-editor .cm-gutters {
-        font-family: var(--font-jetbrains-mono), 'SF Mono', 'Fira Code',
-          'Consolas', monospace;
+        font-family:
+          var(--font-jetbrains-mono), 'SF Mono', 'Fira Code', 'Consolas',
+          monospace;
       }
 
       /* Keep code-block controls visible without hover. */
@@ -410,6 +413,10 @@ body {
         margin-bottom: 0 !important;
       }
 
+      code {
+        max-width: 100%;
+      }
+
       @media (max-width: 767px) {
         padding: 8px 10px;
         /* ≥16 px — iOS не зумит при фокусе */
@@ -440,8 +447,8 @@ body {
   border: 1px solid var(--border-input);
   outline: none;
   resize: none;
-  font-family: var(--font-jetbrains-mono), 'SF Mono', 'Fira Code', 'Consolas',
-    monospace;
+  font-family:
+    var(--font-jetbrains-mono), 'SF Mono', 'Fira Code', 'Consolas', monospace;
   font-size: 0.875rem;
   line-height: 1.6;
   color: var(--text-primary);
