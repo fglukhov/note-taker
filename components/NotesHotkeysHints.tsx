@@ -1,6 +1,6 @@
 import React from 'react';
 import { useSyncExternalStore } from 'react';
-import styles from '@/components/NotesList.module.scss';
+import styles from '@/features/notes/ui/NotesList/NotesList.module.scss';
 
 const NotesHotkeysHints: React.FC = () => {
   const isMac = useSyncExternalStore(

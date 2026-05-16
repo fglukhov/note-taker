@@ -6,9 +6,9 @@ import React, {
   useMemo,
   useCallback,
 } from 'react';
-import NotesListItem from '@/components/NotesListItem';
+import NotesListItem from '@/features/notes/ui/NotesListItem';
 import { NotesProvider } from '@/components/NotesContext';
-import { NotesListItemProps } from '@/components/NotesListItem';
+import { NotesListItemProps } from '@/features/notes/ui/NotesListItem';
 import { useKeyPress } from '@/lib/useKeyPress';
 import { getFamily, removeFamily, getNoteDepth } from '@/lib/notesTree';
 import {
@@ -19,9 +19,10 @@ import {
 } from '@/lib/noteDeleteUndo';
 import NotesHotkeysHints from '@/components/NotesHotkeysHints';
 import { Button } from '@/components/Button';
-import styles from '@/components/NotesList.module.scss';
+import styles from './NotesList.module.scss';
 import Router, { useRouter } from 'next/router';
 import { flushSync } from 'react-dom';
+import { useDebouncedCallback } from 'use-debounce';
 
 // TODO tidy up types
 // TODO handle page reload on cmd+R
@@ -43,36 +44,10 @@ export type FeedModalSync =
 
 type Props = {
   feed: NotesListItemProps[];
-  /** Enables periodic remote sync for authenticated users. */
-  enableRemoteSync?: boolean;
   /** One-shot sync from the note modal (save, delete, …). */
   feedModalSync?: FeedModalSync | null;
   /** Called whenever the local notesFeed changes (for optimistic modal opening). */
   onFeedChange?: (feed: NotesListItemProps[]) => void;
-};
-
-type SyncChangeNote = Pick<
-  NotesListItemProps,
-  | 'id'
-  | 'title'
-  | 'content'
-  | 'hasContent'
-  | 'parentId'
-  | 'sort'
-  | 'complete'
-  | 'collapsed'
-  | 'priority'
->;
-
-type SyncChangesResponse = {
-  changes: Array<{
-    op: 'upsert' | 'delete';
-    id: string;
-    updatedAt: string;
-    note?: SyncChangeNote;
-  }>;
-  nextSince: string;
-  hasMore: boolean;
 };
 
 const UNDO_DELETE_MS = 10_000;
@@ -82,7 +57,6 @@ const isNotesMobileViewport = (): boolean =>
   typeof window !== 'undefined' &&
   window.matchMedia('(max-width: 767px)').matches;
 
-//let reorderInterval = null;
 let timeout: ReturnType<typeof setTimeout> | null = null;
 
 const parentKey = (pid: string | undefined | null) => pid ?? 'root';
@@ -204,7 +178,6 @@ const NotesList: React.FC<Props> = (props) => {
   type NotesItemAction = Parameters<
     NonNullable<NotesListItemProps['onRunAction']>
   >[2];
-  const reorderTimeoutRef = useRef<number | null>(null);
 
   const updatedIds = useRef<string[]>([]);
   const savedUpdatedIds = useRef<string[]>([]);
@@ -245,10 +218,8 @@ const NotesList: React.FC<Props> = (props) => {
 
   const isChangedRef = useRef(isChanged);
   const isUpdatingRef = useRef(isUpdating);
-  /** True as soon as local edits queue an outbound save (before React commits isChanged). */
-  const outboundDirtyRef = useRef(false);
-  const isSyncingRemoteRef = useRef(false);
-  const remoteSinceRef = useRef<string>(new Date().toISOString());
+  const lastSyncTokenRef = useRef<string | null>(null);
+  const lastActivityRef = useRef<number>(Date.now());
 
   const hiddenRanges = useMemo(() => {
     const ranges: { start: number; end: number }[] = [];
@@ -280,54 +251,44 @@ const NotesList: React.FC<Props> = (props) => {
     return ranges;
   }, [notesFeed]);
 
-  function reorderCallback() {
-    // TODO notes are not synchronized while a form is open, but syncing breaks sorting
-
-    if (isChanged && !isUpdating) {
-      setIsChanged(false);
-      setIsUpdating(true);
-
-      reorderNotes(prevFeed.current, syncFeed.current, savedUpdatedIds.current)
-        .then(() => {
-          setIsUpdating(false);
-          if (syncFeed.current) {
-            prevFeed.current = syncFeed.current.map((n) => ({ ...n }));
-          }
-
-          outboundDirtyRef.current =
-            savedUpdatedIds.current.length > 0 || updatedIds.current.length > 0;
-
-          // If new changes appear while sending, send one more time.
-          if (isChangedRef.current) {
-            reorderCallback();
-          }
-        })
-        .catch((err: unknown) => {
-          console.error(err);
-
-          setIsUpdating(false);
-          outboundDirtyRef.current =
-            savedUpdatedIds.current.length > 0 || updatedIds.current.length > 0;
-
-          // Retry as well if changes appeared while the request failed.
-          if (isChangedRef.current) {
-            reorderCallback();
-          }
-        });
+  const postNotes = async () => {
+    if (!isChanged || isUpdating) return;
+    setIsChanged(false);
+    setIsUpdating(true);
+    console.log('[postNotes] POST start', new Date().toISOString());
+    try {
+      await fetch('/api/update/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prevFeed: prevFeed.current,
+          feed: syncFeed.current,
+          ids: savedUpdatedIds.current,
+        }),
+      });
+      setIsUpdating(false);
+      savedUpdatedIds.current = [];
+      if (syncFeed.current)
+        prevFeed.current = syncFeed.current.map((n) => ({ ...n }));
+    } catch (err) {
+      console.error(err);
+      setIsUpdating(false);
     }
-  }
+    if (isChangedRef.current) {
+      debouncedPostNotes();
+    }
+  };
 
-  const scheduleSyncUpdate = () => {
-    outboundDirtyRef.current = true;
-    // Merge ids immediately so the next POST always sees the full pending set.
-    // Setting isChanged without the old 1s delay blocks remote sync from overwriting
-    // local sort/collapse state before the outbound request arms (see runSyncTick).
+  const debouncedPostNotes = useDebouncedCallback(postNotes, 800);
+
+  const schedulePostNotes = () => {
     savedUpdatedIds.current = Array.from(
       new Set([...savedUpdatedIds.current, ...updatedIds.current]),
     );
     updatedIds.current = [];
 
     setIsChanged(true);
+    debouncedPostNotes();
   };
 
   const removeNoteFamilyFromFeed = (
@@ -386,7 +347,7 @@ const NotesList: React.FC<Props> = (props) => {
     }
     markSiblingsForSync(merged, parentId, updatedIds.current);
 
-    scheduleSyncUpdate();
+    schedulePostNotes();
     syncFeed.current = merged;
     setNotesFeed(merged);
 
@@ -430,7 +391,7 @@ const NotesList: React.FC<Props> = (props) => {
     }, UNDO_DELETE_MS);
 
     const newFeed = removeNoteFamilyFromFeed(targetId, notesFeed);
-    scheduleSyncUpdate();
+    schedulePostNotes();
     syncFeed.current = newFeed;
     setNotesFeed(newFeed);
 
@@ -592,21 +553,6 @@ const NotesList: React.FC<Props> = (props) => {
   };
 
   useEffect(() => {
-    if (!isChanged) return;
-
-    // If the user keeps interacting, reset the timer.
-    if (reorderTimeoutRef.current) {
-      clearTimeout(reorderTimeoutRef.current);
-    }
-
-    reorderTimeoutRef.current = window.setTimeout(() => {
-      reorderCallback();
-      reorderTimeoutRef.current = null;
-    }, 800);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isChanged, notesFeed]);
-
-  useEffect(() => {
     isChangedRef.current = isChanged;
   }, [isChanged]);
 
@@ -615,24 +561,31 @@ const NotesList: React.FC<Props> = (props) => {
   }, [isUpdating]);
 
   useEffect(() => {
-    const timestamps = props.feed
-      .map((n) => {
-        const raw = (n as NotesListItemProps & { updatedAt?: string | Date })
-          .updatedAt;
-        if (!raw) return null;
-        const parsed = new Date(raw);
-        return Number.isNaN(parsed.getTime()) ? null : parsed;
-      })
-      .filter((v): v is Date => v instanceof Date);
+    const POLL_INTERVAL = 5_000;
+    const ACTIVITY_GRACE_MS = 1_500;
 
-    if (timestamps.length === 0) {
-      remoteSinceRef.current = new Date().toISOString();
-      return;
-    }
+    const tick = async () => {
+      if (isChangedRef.current || isUpdatingRef.current) return;
+      if (Date.now() - lastActivityRef.current < ACTIVITY_GRACE_MS) return;
 
-    const latestMs = Math.max(...timestamps.map((d) => d.getTime()));
-    remoteSinceRef.current = new Date(latestMs).toISOString();
-  }, [props.feed]);
+      try {
+        const res = await fetch('/api/feed');
+        if (!res.ok) return;
+        const { notes, syncToken } = await res.json();
+        if (syncToken === lastSyncTokenRef.current) return;
+        lastSyncTokenRef.current = syncToken;
+        setNotesFeed(notes);
+        prevFeed.current = notes.map((n) => ({ ...n }));
+        savedUpdatedIds.current = [];
+        updatedIds.current = [];
+      } catch {
+        // ignore network errors; next tick will retry
+      }
+    };
+
+    const id = setInterval(tick, POLL_INTERVAL);
+    return () => clearInterval(id);
+  }, []);
 
   useEffect(() => {
     props.onFeedChange?.(notesFeed);
@@ -667,140 +620,6 @@ const NotesList: React.FC<Props> = (props) => {
       );
     }
   }, [props.feedModalSync]);
-
-  useEffect(() => {
-    if (!props.enableRemoteSync) return;
-    if (typeof window === 'undefined') return;
-
-    let cancelled = false;
-
-    const applyChanges = (
-      baseFeed: NotesListItemProps[],
-      changes: SyncChangesResponse['changes'],
-    ) => {
-      let nextFeed = baseFeed.slice();
-      const touchedParents = new Set<string | null | undefined>();
-
-      for (const change of changes) {
-        if (change.op === 'delete') {
-          const idx = nextFeed.findIndex((n) => n.id === change.id);
-          if (idx >= 0) {
-            touchedParents.add(nextFeed[idx].parentId);
-            nextFeed.splice(idx, 1);
-          }
-          continue;
-        }
-        if (!change.note) continue;
-        const incoming = change.note;
-        const idx = nextFeed.findIndex((n) => n.id === incoming.id);
-        const prevParent = idx >= 0 ? nextFeed[idx].parentId : null;
-
-        if (idx >= 0) {
-          nextFeed[idx] = {
-            ...nextFeed[idx],
-            ...incoming,
-            isNew: false,
-          };
-        } else {
-          nextFeed.push({
-            ...incoming,
-            isNew: false,
-          });
-        }
-
-        touchedParents.add(prevParent);
-        touchedParents.add(incoming.parentId);
-      }
-
-      for (const parentId of Array.from(touchedParents)) {
-        nextFeed = renormalizeSortsForParent(nextFeed, parentId);
-      }
-
-      return nextFeed;
-    };
-
-    const runSyncTick = async () => {
-      if (cancelled) return;
-      if (isSyncingRemoteRef.current) return;
-      if (
-        outboundDirtyRef.current ||
-        isChangedRef.current ||
-        isUpdatingRef.current
-      )
-        return;
-      if (isEditTitle || isNoteModalOpen || showRestoreUndo) return;
-
-      isSyncingRemoteRef.current = true;
-      try {
-        const stateRes = await fetch(
-          `/api/sync/state?since=${encodeURIComponent(remoteSinceRef.current)}`,
-        );
-        if (!stateRes.ok) return;
-        const stateData = (await stateRes.json()) as {
-          hasChanges?: boolean;
-          latestUpdatedAt?: string | null;
-        };
-        if (!stateData.hasChanges) return;
-
-        const changesRes = await fetch(
-          `/api/sync/changes?since=${encodeURIComponent(remoteSinceRef.current)}&limit=200`,
-        );
-        if (!changesRes.ok) return;
-
-        const payload = (await changesRes.json()) as SyncChangesResponse;
-        if (!Array.isArray(payload.changes) || payload.changes.length === 0) {
-          if (
-            typeof payload.nextSince === 'string' &&
-            payload.nextSince.length > 0
-          ) {
-            remoteSinceRef.current = payload.nextSince;
-          }
-          return;
-        }
-
-        setNotesFeed((prev) => {
-          const next = applyChanges(prev, payload.changes);
-          syncFeed.current = next.map((n) => ({ ...n }));
-          prevFeed.current = next.map((n) => ({ ...n }));
-          const currentFocusId = focusId.current;
-          if (currentFocusId) {
-            const restoredPosition = findPositionByIdInFeed(
-              next,
-              currentFocusId,
-            );
-            if (restoredPosition !== null) {
-              setCursorPosition(restoredPosition);
-            } else {
-              setCursorPosition((cp) =>
-                next.length === 0 ? 0 : Math.min(cp, next.length - 1),
-              );
-            }
-          }
-          return next;
-        });
-
-        if (
-          typeof payload.nextSince === 'string' &&
-          payload.nextSince.length > 0
-        ) {
-          remoteSinceRef.current = payload.nextSince;
-        }
-      } catch (error) {
-        console.error(error);
-      } finally {
-        isSyncingRemoteRef.current = false;
-      }
-    };
-
-    const intervalId = window.setInterval(() => {
-      void runSyncTick();
-    }, 5000);
-
-    return () => {
-      cancelled = true;
-      window.clearInterval(intervalId);
-    };
-  }, [isEditTitle, isNoteModalOpen, showRestoreUndo, props.enableRemoteSync]);
 
   const findPositionById = useCallback(
     (targetId: string): number | null => {
@@ -884,7 +703,6 @@ const NotesList: React.FC<Props> = (props) => {
       return n;
     });
 
-    scheduleSyncUpdate();
     syncFeed.current = newFeed;
     setNotesFeed(newFeed);
   };
@@ -1046,7 +864,7 @@ const NotesList: React.FC<Props> = (props) => {
       markSiblingsForSync(newFeed, curNote.parentId, updatedIds.current);
       markSiblingsForSync(newFeed, newParentId, updatedIds.current);
 
-      scheduleSyncUpdate();
+      schedulePostNotes();
 
       syncFeed.current = newFeed;
       setNotesFeed(newFeed);
@@ -1120,7 +938,7 @@ const NotesList: React.FC<Props> = (props) => {
       markSiblingsForSync(newFeed, parentId, updatedIds.current);
       markSiblingsForSync(newFeed, newParentId, updatedIds.current);
 
-      scheduleSyncUpdate();
+      schedulePostNotes();
 
       syncFeed.current = newFeed;
       setNotesFeed(newFeed);
@@ -1208,7 +1026,7 @@ const NotesList: React.FC<Props> = (props) => {
       newFeed = renormalizeSortsForParent(newFeed, curNote.parentId);
       markSiblingsForSync(newFeed, curNote.parentId, updatedIds.current);
 
-      scheduleSyncUpdate();
+      schedulePostNotes();
 
       syncFeed.current = newFeed;
       setNotesFeed(newFeed);
@@ -1252,7 +1070,7 @@ const NotesList: React.FC<Props> = (props) => {
       }
     });
 
-    scheduleSyncUpdate();
+    schedulePostNotes();
     syncFeed.current = newFeed;
     setNotesFeed(newFeed);
   };
@@ -1272,7 +1090,7 @@ const NotesList: React.FC<Props> = (props) => {
       return { ...n, complete: isComplete };
     });
 
-    scheduleSyncUpdate();
+    schedulePostNotes();
     syncFeed.current = newFeed;
     setNotesFeed(newFeed);
   };
@@ -1334,7 +1152,7 @@ const NotesList: React.FC<Props> = (props) => {
       };
     });
 
-    scheduleSyncUpdate();
+    schedulePostNotes();
     syncFeed.current = newFeed;
     setNotesFeed(newFeed);
   };
@@ -1370,7 +1188,7 @@ const NotesList: React.FC<Props> = (props) => {
       };
     });
 
-    scheduleSyncUpdate();
+    schedulePostNotes();
     syncFeed.current = newFeed;
     setNotesFeed(newFeed);
   };
@@ -1398,7 +1216,7 @@ const NotesList: React.FC<Props> = (props) => {
       return { ...n, title: newTitle };
     });
 
-    scheduleSyncUpdate();
+    schedulePostNotes();
     syncFeed.current = newFeed;
     setNotesFeed(newFeed);
   };
@@ -1432,7 +1250,7 @@ const NotesList: React.FC<Props> = (props) => {
       return { ...n, title: newTitle };
     });
 
-    scheduleSyncUpdate();
+    schedulePostNotes();
     syncFeed.current = newFeed;
     setNotesFeed(newFeed);
   };
@@ -1463,6 +1281,7 @@ const NotesList: React.FC<Props> = (props) => {
     }
 
     eventKeyRef.current = event.code;
+    lastActivityRef.current = Date.now();
 
     clearTimeout(timeout);
     timeout = setTimeout(function () {
@@ -1546,25 +1365,6 @@ const NotesList: React.FC<Props> = (props) => {
       }
     };
   }, [router.isReady, router.query.note]);
-
-  // TODO feed and updatedIds should be parameters
-  const reorderNotes = async (
-    prevFeed: NotesListItemProps[],
-    feed: NotesListItemProps[] | null,
-    ids: string[],
-  ): Promise<void> => {
-    const body = { prevFeed, feed, ids };
-
-    try {
-      await fetch('/api/update/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-    } catch (error) {
-      console.error(error);
-    }
-  };
 
   const handleEdit = (noteId: string, title: string): void => {
     clearDeleteUndo();
@@ -1673,7 +1473,7 @@ const NotesList: React.FC<Props> = (props) => {
       }
 
       setIsEditTitle(false);
-      scheduleSyncUpdate();
+      schedulePostNotes();
       syncFeed.current = newFeed;
       setNotesFeed(newFeed);
       const lastCreatedNoteId = newNotes[newNotes.length - 1]?.id;
@@ -1774,7 +1574,7 @@ const NotesList: React.FC<Props> = (props) => {
       setCursorPosition(cursorPosition + 1);
     }
 
-    scheduleSyncUpdate();
+    schedulePostNotes();
 
     syncFeed.current = newFeed;
 

@@ -1,4 +1,4 @@
-import { NotesListItemProps } from '@/components/NotesListItem';
+import { NotesListItemProps } from '@/features/notes/ui/NotesListItem';
 
 const buildChildrenIndex = (feed: NotesListItemProps[]) => {
   const childrenByParentId: Record<string, NotesListItemProps[]> = {};

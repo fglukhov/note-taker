@@ -3,7 +3,7 @@ import {
   captureAnchorSiblingId,
   restoreDeletedFamilyIntoFeed,
 } from '@/lib/noteDeleteUndo';
-import type { NotesListItemProps } from '@/components/NotesListItem';
+import type { NotesListItemProps } from '@/features/notes/ui/NotesListItem';
 
 const n = (
   id: string,
