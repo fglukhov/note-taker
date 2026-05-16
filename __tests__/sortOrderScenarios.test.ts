@@ -7,7 +7,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { getFamily } from '@/lib/notesTree';
-import type { NotesListItemProps } from '@/components/NotesListItem';
+import type { NotesListItemProps } from '@/features/notes/ui/NotesListItem';
 import {
   applyPartialServerUpdate,
   assertAllSiblingsContiguous,

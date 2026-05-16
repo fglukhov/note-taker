@@ -1,4 +1,4 @@
-import type { NotesListItemProps } from '@/components/NotesListItem';
+import type { NotesListItemProps } from '@/features/notes/ui/NotesListItem';
 
 const parentKey = (pid: string | undefined | null) => pid ?? 'root';
 

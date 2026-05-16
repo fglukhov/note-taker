@@ -2,8 +2,8 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useAutoResizeTextarea } from '@/lib/useAutoResizeTextarea';
 import { GetServerSideProps } from 'next';
 import Layout from '@/components/Layout';
-import NotesList, { FeedModalSync } from '@/components/NotesList';
-import { NotesListItemProps } from '@/components/NotesListItem';
+import NotesList, { FeedModalSync } from '@/features/notes/ui/NotesList';
+import { NotesListItemProps } from '@/features/notes/ui/NotesListItem';
 import { Button } from '@/components/Button';
 import prisma from '@/lib/prisma';
 import { getSession } from 'next-auth/react';
@@ -908,7 +908,6 @@ const Main: React.FC<Props> = (props) => {
 
           <NotesList
             feed={props.session ? props.feed : demoFeed}
-            enableRemoteSync={Boolean(props.session)}
             feedModalSync={feedModalSync}
             onFeedChange={(feed) => {
               localFeedRef.current = feed;
