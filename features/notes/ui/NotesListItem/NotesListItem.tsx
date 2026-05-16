@@ -388,15 +388,18 @@ const NotesListItem: React.FC<NotesListItemProps> = (props) => {
       setIsSwiping(false);
       const finalOffset =
         Math.abs(nextOffset) > 0 ? nextOffset : swipeOffsetRef.current;
+      resetSwipeState();
       if (Math.abs(finalOffset) >= SWIPE_THRESHOLD) {
+        const onComplete = props.onComplete;
+        const onDelete = props.onDelete;
         if (finalOffset > 0) {
-          props.onComplete?.(id, !Boolean(props.complete));
+          requestAnimationFrame(() =>
+            onComplete?.(id, !Boolean(props.complete)),
+          );
         } else if (finalOffset < 0) {
-          props.onDelete?.(id, parentId, sort);
+          requestAnimationFrame(() => onDelete?.(id, parentId, sort));
         }
       }
-
-      resetSwipeState();
     },
     {
       axis: 'x',
